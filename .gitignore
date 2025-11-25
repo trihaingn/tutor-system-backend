@@ -1,0 +1,27 @@
+# Dependency directories
+node_modules/
+
+# Environment variables (BẢO MẬT TUYỆT ĐỐI)
+.env
+.env.test
+.env.production
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Editor directories
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Testing
+coverage/

@@ -8,9 +8,26 @@
     "dev": "nodemon src/server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["tutor", "hcmut", "education"],
+  "keywords": [
+    "tutor",
+    "hcmut",
+    "education"
+  ],
   "author": "",
   "license": "ISC",
-  "dependencies": {},
-  "devDependencies": {}
+  "dependencies": {
+    "axios": "^1.13.2",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "helmet": "^8.1.0",
+    "joi": "^18.0.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^9.0.0",
+    "morgan": "^1.10.1",
+    "winston": "^3.18.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.11"
+  }
 }
