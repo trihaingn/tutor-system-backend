@@ -182,14 +182,13 @@ UserSchema.statics.findByMaCB = function(maCB) {
 };
 
 // Pre-save validation
-UserSchema.pre('save', function(next) {
+UserSchema.pre('save', async function() {
   if (this.role === 'STUDENT' && !this.mssv) {
-    return next(new Error('MSSV is required for students'));
+    throw new Error('MSSV is required for students');
   }
   if ((this.role === 'TUTOR' || this.role === 'ADMIN') && !this.maCB) {
-    return next(new Error('Mã CB is required for tutors and admins'));
+    throw new Error('Mã CB is required for tutors and admins');
   }
-  next();
 });
 
 // Enable virtuals in JSON

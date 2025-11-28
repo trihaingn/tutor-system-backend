@@ -144,6 +144,98 @@
 //   }
 // }
 
-// TODO: Implement CORS configuration
-// TODO: Export corsMiddleware
-// module.exports = corsMiddleware
+// ============================================================
+// IMPLEMENTATION
+// ============================================================
+
+const cors = require('cors');
+
+/**
+ * Get allowed origins based on environment
+ */
+const getAllowedOrigins = () => {
+  // Get origins from environment variable (comma-separated)
+  const envOrigins = process.env.CORS_ORIGIN;
+  
+  if (envOrigins) {
+    return envOrigins.split(',').map(origin => origin.trim());
+  }
+
+  // Default origins based on environment
+  switch (process.env.NODE_ENV) {
+    case 'development':
+      return [
+        'http://localhost:3000',
+        'http://localhost:3001',
+        'http://localhost:5173',
+        'http://localhost:8080',
+        'http://127.0.0.1:3000',
+        'http://127.0.0.1:3001'
+      ];
+    
+    case 'staging':
+      return [
+        'https://tutor-staging.hcmut.edu.vn'
+      ];
+    
+    case 'production':
+      return [
+        'https://tutor.hcmut.edu.vn',
+        'https://tutor-app.hcmut.edu.vn'
+      ];
+    
+    default:
+      return ['http://localhost:3000'];
+  }
+};
+
+/**
+ * CORS options configuration
+ */
+const corsOptions = {
+  origin: (origin, callback) => {
+    const allowedOrigins = getAllowedOrigins();
+    
+    // Allow requests with no origin (mobile apps, Postman, curl, etc.)
+    if (!origin) {
+      return callback(null, true);
+    }
+    
+    // Development: Allow all origins
+    if (process.env.NODE_ENV === 'development') {
+      return callback(null, true);
+    }
+    
+    // Check if origin is in whitelist
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error(`Origin ${origin} not allowed by CORS`));
+    }
+  },
+  
+  credentials: true, // Allow cookies (required for JWT in httpOnly cookies)
+  
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  
+  allowedHeaders: [
+    'Content-Type',
+    'Authorization',
+    'X-Requested-With',
+    'Accept',
+    'Origin'
+  ],
+  
+  exposedHeaders: [
+    'X-Total-Count',
+    'X-Page-Count',
+    'X-Total-Pages'
+  ],
+  
+  maxAge: 86400 // 24 hours (preflight cache)
+};
+
+// Create and export CORS middleware
+const corsMiddleware = cors(corsOptions);
+
+module.exports = corsMiddleware;

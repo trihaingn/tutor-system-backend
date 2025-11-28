@@ -27,3 +27,4 @@ pids
 coverage/
 
 *.md
+*.txt

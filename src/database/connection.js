@@ -185,7 +185,7 @@
 // startServer()
 
 const mongoose = require('mongoose');
-const { databaseConfig } = require('../config/database.config');
+const databaseConfig = require('../config/database.config');
 
 let connection = null;
 

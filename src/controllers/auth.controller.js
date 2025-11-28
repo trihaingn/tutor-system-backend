@@ -110,8 +110,11 @@
 
 const AuthService = require('../services/auth/AuthService');
 const UserService = require('../services/user/UserService');
+const CASService = require('../services/auth/CASService');
 const { asyncHandler } = require('../middleware/errorMiddleware');
 const { SSO_LOGIN_URL, SSO_SERVICE_URL } = require('../config/sso.config');
+const casConfig = require('../config/cas.config');
+const jwt = require('jsonwebtoken');
 
 /**
  * GET /api/v1/auth/login
@@ -201,5 +204,198 @@ module.exports = {
   login,
   handleCallback,
   logout,
-  getCurrentUser
+  getCurrentUser,
+  casLogin,
+  casCallback
 };
+
+/**
+ * ============================================================
+ * CAS AUTHENTICATION HANDLERS
+ * ============================================================
+ */
+
+/**
+ * GET /api/v1/auth/cas/login
+ * Redirect user to CAS login page
+ * 
+ * FLOW:
+ * 1. Generate CAS login URL with service callback
+ * 2. Redirect user to CAS server
+ * 3. CAS shows login form
+ * 4. After login, CAS redirects back to /auth/cas/callback with ticket
+ */
+async function casLogin(req, res) {
+  try {
+    // Check if CAS is enabled
+    if (!CASService.isEnabled()) {
+      return res.status(503).json({
+        success: false,
+        message: 'CAS authentication is not enabled'
+      });
+    }
+
+    // Generate CAS login URL with callback service URL
+    const serviceUrl = casConfig.serviceUrl || `${req.protocol}://${req.get('host')}/api/v1/auth/cas/callback`;
+    const loginUrl = CASService.generateLoginUrl(serviceUrl);
+
+    // Redirect user to CAS login page
+    res.redirect(loginUrl);
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Failed to initiate CAS login',
+      error: error.message
+    });
+  }
+}
+
+/**
+ * GET /api/v1/auth/cas/callback
+ * Handle CAS callback with ticket validation
+ * 
+ * QUERY PARAMS:
+ * - ticket: CAS service ticket (ST-xxxxx)
+ * 
+ * FLOW:
+ * 1. Extract ticket from query params
+ * 2. Validate ticket with CAS server (server-to-server)
+ * 3. Get user info from CAS validation response
+ * 4. Find or create user in local database
+ * 5. Sync with DATACORE if needed (BR-007)
+ * 6. Generate JWT token for user
+ * 7. Set JWT in HTTP-only cookie
+ * 8. Redirect to frontend dashboard
+ * 
+ * SECURITY:
+ * - Ticket is single-use (validated and consumed by CAS)
+ * - Never trust client-provided user info
+ * - Only trust CAS validation results
+ */
+async function casCallback(req, res) {
+  try {
+    const { ticket } = req.query;
+
+    // Validate required parameters
+    if (!ticket) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing CAS ticket parameter'
+      });
+    }
+
+    // Check if CAS is enabled
+    if (!CASService.isEnabled()) {
+      return res.status(503).json({
+        success: false,
+        message: 'CAS authentication is not enabled'
+      });
+    }
+
+    // Step 1: Validate ticket with CAS server (server-to-server call)
+    const serviceUrl = casConfig.serviceUrl || `${req.protocol}://${req.get('host')}/api/v1/auth/cas/callback`;
+    const casUserData = await CASService.validateTicket(ticket, serviceUrl);
+
+    // casUserData = { id, username, email }
+    // Note: CAS has already invalidated the ticket (single-use)
+
+    // Step 2: Find or create user in local database
+    // The User model should have fields: email, username, etc.
+    const User = require('../models/User.model');
+    
+    let user = await User.findOne({ email: casUserData.email });
+
+    if (!user) {
+      // Extract username from email (e.g., "student01" from "student01@hcmut.edu.vn")
+      const username = casUserData.username || casUserData.email.split('@')[0];
+      
+      // Determine role based on username pattern or default to STUDENT
+      // Tutors/Admins usually have different email patterns (e.g., lecturer@hcmut.edu.vn)
+      const isStaff = /^[a-zA-Z]+$/.test(username); // Simple heuristic: staff usernames are alphabetic only
+      const role = isStaff ? 'TUTOR' : 'STUDENT';
+      
+      // Create new user with required fields
+      const userData = {
+        email: casUserData.email,
+        fullName: casUserData.fullName || username,
+        role: role,
+        status: 'ACTIVE',
+        syncSource: 'MANUAL' // Will be updated when synced with DATACORE
+      };
+      
+      // Add mssv for students or maCB for staff
+      if (role === 'STUDENT') {
+        // Use username as mssv (student ID), e.g., "2252123"
+        userData.mssv = username;
+      } else {
+        // Use username as maCB (staff ID)
+        userData.maCB = username;
+      }
+      
+      user = await User.create(userData);
+    } else {
+      // Update last sync time
+      user.lastSyncAt = new Date();
+      await user.save();
+    }
+
+    // Step 3: (Optional) Sync with DATACORE if needed (BR-007)
+    // TODO: Implement DATACORE sync logic here if required
+    // const DatacoreService = require('../services/integration/DatacoreService');
+    // if (user.mssv || user.maCB) {
+    //   await DatacoreService.syncUserData(user);
+    // }
+
+    // Step 4: Generate JWT token for the user
+    const jwtPayload = {
+      userId: user._id.toString(),
+      email: user.email,
+      role: user.role
+    };
+
+    const token = jwt.sign(
+      jwtPayload,
+      process.env.JWT_SECRET,
+      { expiresIn: process.env.JWT_EXPIRES_IN || '1d' }
+    );
+
+    // Step 5: Set JWT in HTTP-only cookie (secure session)
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production', // HTTPS only in production
+      sameSite: 'lax',
+      maxAge: 24 * 60 * 60 * 1000 // 1 day
+    });
+
+    // Step 6: Redirect to frontend dashboard (or return JSON for SPA)
+    // Option A: Redirect to frontend
+    const frontendUrl = casConfig.frontendUrl || 'http://localhost:3001/dashboard';
+    res.redirect(frontendUrl);
+
+    // Option B: Return JSON response (if frontend is SPA that handles routing)
+    // res.status(200).json({
+    //   success: true,
+    //   message: 'CAS authentication successful',
+    //   data: {
+    //     user: {
+    //       id: user._id,
+    //       email: user.email,
+    //       username: user.username,
+    //       role: user.role
+    //     },
+    //     token
+    //   }
+    // });
+
+  } catch (error) {
+    // Handle errors (invalid ticket, CAS server down, database error, etc.)
+    console.error('CAS callback error:', error);
+    
+    return res.status(401).json({
+      success: false,
+      message: 'CAS authentication failed',
+      error: error.message
+    });
+  }
+}
+

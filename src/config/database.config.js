@@ -93,5 +93,42 @@
 //   }
 // }
 
-// TODO: Export configuration
-// module.exports = databaseConfig
+// ============================================================
+// IMPLEMENTATION
+// ============================================================
+
+require('dotenv').config();
+
+const databaseConfig = {
+  // MongoDB Connection URI
+  uri: process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/tutor-system',
+  
+  // Connection Options
+  options: {
+    // Auto-create indexes (disable in production for performance)
+    autoIndex: process.env.NODE_ENV !== 'production',
+    
+    // Connection pool size
+    maxPoolSize: process.env.NODE_ENV === 'production' ? 50 : 10,
+    
+    // Server selection timeout (30s)
+    serverSelectionTimeoutMS: 30000,
+    
+    // Socket timeout (45s)
+    socketTimeoutMS: 45000,
+    
+    // Retry writes on failure
+    retryWrites: true,
+    
+    // Write concern
+    w: 'majority'
+  }
+};
+
+// Enable debug mode in development
+if (process.env.NODE_ENV === 'development') {
+  // Mongoose will log all queries to console
+  // Uncomment to enable: databaseConfig.options.debug = true;
+}
+
+module.exports = databaseConfig;
