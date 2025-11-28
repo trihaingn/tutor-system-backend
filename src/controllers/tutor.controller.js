@@ -201,8 +201,8 @@
 //   "pagination": {...}
 // }
 
-const TutorService = require('../services/user/TutorService');
-const { asyncHandler } = require('../middleware/errorMiddleware');
+import * as TutorService from '../services/user/TutorService.js';
+import { asyncHandler } from '../middleware/errorMiddleware.js';
 
 /**
  * GET /api/v1/tutors/search
@@ -244,7 +244,7 @@ const getTutorDetails = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = {
+export {
   searchTutors,
   getTutorDetails
 };

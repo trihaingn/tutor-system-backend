@@ -131,16 +131,16 @@
 // PSEUDOCODE:
 // app.use(errorMiddleware)
 
-const express = require('express');
-const cookieParser = require('cookie-parser');
-const cors = require('cors');
+import express from 'express';
+import cookieParser from 'cookie-parser';
+import cors from 'cors';
 
 // Import middleware
-const { errorHandler } = require('./middleware/errorMiddleware');
-const corsMiddleware = require('./middleware/corsMiddleware');
+import { errorHandler } from './middleware/errorMiddleware.js';
+import corsMiddleware from './middleware/corsMiddleware.js';
 
 // Import routes
-const routes = require('./routes');
+import routes from './routes/index.js';
 
 // Initialize Express app
 const app = express();
@@ -188,4 +188,4 @@ app.use((req, res) => {
 // Global error handling middleware (must be last)
 app.use(errorHandler);
 
-module.exports = app;
+export default app;

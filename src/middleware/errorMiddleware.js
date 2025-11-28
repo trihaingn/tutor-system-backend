@@ -196,6 +196,12 @@ class ConflictError extends AppError {
   }
 }
 
+class InternalServerError extends AppError {
+  constructor(message = 'Internal server error') {
+    super(message, 500);
+  }
+}
+
 // Error Handler Middleware
 const errorHandler = (err, req, res, next) => {
   // Log error
@@ -260,7 +266,7 @@ const asyncHandler = (fn) => {
   };
 };
 
-module.exports = {
+export {
   errorHandler,
   notFoundHandler,
   asyncHandler,
@@ -269,5 +275,6 @@ module.exports = {
   AuthorizationError,
   NotFoundError,
   ValidationError,
-  ConflictError
+  ConflictError,
+  InternalServerError
 };

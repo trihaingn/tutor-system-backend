@@ -208,8 +208,8 @@
 // OUTPUT:
 // - { data: [], pagination: {...} }
 
-const BaseRepository = require('./BaseRepository');
-const Student = require('../models/Student.model');
+import BaseRepository from './BaseRepository.js';
+import Student from '../models/Student.model.js';
 
 class StudentRepository extends BaseRepository {
   constructor() {
@@ -248,4 +248,4 @@ class StudentRepository extends BaseRepository {
   }
 }
 
-module.exports = new StudentRepository();
+export default new StudentRepository();

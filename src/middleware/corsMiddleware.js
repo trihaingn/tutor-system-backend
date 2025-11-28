@@ -148,7 +148,7 @@
 // IMPLEMENTATION
 // ============================================================
 
-const cors = require('cors');
+import cors from 'cors';
 
 /**
  * Get allowed origins based on environment
@@ -238,4 +238,4 @@ const corsOptions = {
 // Create and export CORS middleware
 const corsMiddleware = cors(corsOptions);
 
-module.exports = corsMiddleware;
+export default corsMiddleware;

@@ -9,8 +9,8 @@
  * - Constants (ERROR_MESSAGES, HTTP_STATUS)
  */
 
-const jwt = require('jsonwebtoken');
-const User = require('../models/User.model');
+import jwt from 'jsonwebtoken';
+import User from '../models/User.model.js';
 
 /**
  * Authentication Middleware
@@ -167,4 +167,4 @@ const optionalAuth = async (req, res, next) => {
   }
 };
 
-module.exports = { authMiddleware, optionalAuth };
+export { authMiddleware, optionalAuth };

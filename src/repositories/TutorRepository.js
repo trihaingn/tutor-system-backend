@@ -303,8 +303,8 @@
 // OUTPUT:
 // - Array of top-rated Tutors
 
-const BaseRepository = require('./BaseRepository');
-const Tutor = require('../models/Tutor.model');
+import BaseRepository from './BaseRepository.js';
+import Tutor from '../models/Tutor.model.js';
 
 class TutorRepository extends BaseRepository {
   constructor() {
@@ -417,4 +417,4 @@ class TutorRepository extends BaseRepository {
   }
 }
 
-module.exports = new TutorRepository();
+export default new TutorRepository();

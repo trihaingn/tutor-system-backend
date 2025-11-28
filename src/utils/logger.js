@@ -87,15 +87,13 @@ const morganStream = {
 // logger.warn('Rate limit exceeded', { userId: '123', endpoint: '/api/sessions' })
 // logger.debug('Query result', { result: data })
 
-module.exports = {
+export {
   logger,
   logRequest,
   logError,
   logDebug,
-  morganStream,
-  // Also export logger methods directly for convenience
-  info: logger.info,
-  error: logger.error,
-  warn: logger.warn,
-  debug: logger.debug
+  morganStream
 };
+
+// Also export logger methods directly for convenience
+export const { info, error, warn, debug } = logger;

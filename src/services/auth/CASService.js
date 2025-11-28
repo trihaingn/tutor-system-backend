@@ -16,7 +16,7 @@
  */
 
 import axios from 'axios';
-import logger from '../../utils/logger.js';
+import { logger } from '../../utils/logger.js';
 import casConfig from '../../config/cas.config.js';
 
 class CASService {

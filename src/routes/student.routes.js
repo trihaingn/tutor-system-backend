@@ -61,7 +61,7 @@
 
 import express from 'express';
 const router = express.Router();
-import studentController from '../controllers/student.controller.js';
+import * as studentController from '../controllers/student.controller.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 import { roleMiddleware } from '../middleware/roleMiddleware.js';
 
