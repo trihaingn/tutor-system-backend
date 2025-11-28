@@ -55,42 +55,145 @@
  * - DATACORE là READ-ONLY source (hệ thống không sửa data trên DATACORE)
  */
 
-// TODO: Import mongoose
-// const mongoose = require('mongoose');
+const mongoose = require('mongoose');
 
-// TODO: Định nghĩa UserSchema với các trường trên
-// const UserSchema = new mongoose.Schema({
-//   mssv: { type: String, unique: true, sparse: true, index: true },
-//   maCB: { type: String, unique: true, sparse: true, index: true },
-//   email: { type: String, required: true, unique: true, lowercase: true, trim: true, index: true },
-//   fullName: { type: String, required: true, trim: true },
-//   faculty: { type: String, enum: [...], index: true },
-//   role: { type: String, enum: ['STUDENT', 'TUTOR', 'ADMIN'], required: true, index: true },
-//   status: { type: String, enum: [...], default: 'ACTIVE', index: true },
-//   lastSyncAt: { type: Date, default: null },
-//   syncSource: { type: String, enum: ['DATACORE', 'MANUAL'], default: 'DATACORE' }
-// }, {
-//   timestamps: true,
-//   collection: 'users'
-// });
+const UserSchema = new mongoose.Schema(
+  {
+    // Identity fields
+    mssv: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true,
+      trim: true
+    },
+    maCB: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true,
+      trim: true
+    },
+    email: {
+      type: String,
+      required: [true, 'Email is required'],
+      unique: true,
+      lowercase: true,
+      trim: true,
+      index: true,
+      match: [
+        /^[a-zA-Z0-9._%+-]+@hcmut\.edu\.vn$/,
+        'Email must be a valid HCMUT email (@hcmut.edu.vn)'
+      ]
+    },
+    
+    // Profile fields
+    fullName: {
+      type: String,
+      required: [true, 'Full name is required'],
+      trim: true,
+      minlength: [2, 'Full name must be at least 2 characters'],
+      maxlength: [100, 'Full name cannot exceed 100 characters']
+    },
+    faculty: {
+      type: String,
+      enum: ['CSE', 'EE', 'ME', 'CE', 'CHE', 'BME', 'APPLIED_SCIENCE', 'MANAGEMENT'],
+      index: true
+    },
+    
+    // Role & Status
+    role: {
+      type: String,
+      enum: ['STUDENT', 'TUTOR', 'ADMIN'],
+      required: [true, 'Role is required'],
+      index: true
+    },
+    status: {
+      type: String,
+      enum: ['ACTIVE', 'SUSPENDED', 'GRADUATED', 'RESIGNED'],
+      default: 'ACTIVE',
+      index: true
+    },
+    
+    // Sync metadata
+    lastSyncAt: {
+      type: Date,
+      default: null
+    },
+    syncSource: {
+      type: String,
+      enum: ['DATACORE', 'MANUAL'],
+      default: 'DATACORE'
+    }
+  },
+  {
+    timestamps: true,
+    collection: 'users'
+  }
+);
 
-// TODO: Thêm composite indexes
-// UserSchema.index({ email: 1, role: 1 });
+// Composite indexes
+UserSchema.index({ email: 1, role: 1 });
+UserSchema.index({ status: 1, role: 1 });
 
-// TODO: Định nghĩa Virtual fields cho populate
-// UserSchema.virtual('student', {
-//   ref: 'Student',
-//   localField: '_id',
-//   foreignField: 'userId',
-//   justOne: true
-// });
+// Virtual fields
+UserSchema.virtual('student', {
+  ref: 'Student',
+  localField: '_id',
+  foreignField: 'userId',
+  justOne: true
+});
 
-// UserSchema.virtual('tutor', {
-//   ref: 'Tutor',
-//   localField: '_id',
-//   foreignField: 'userId',
-//   justOne: true
-// });
+UserSchema.virtual('tutor', {
+  ref: 'Tutor',
+  localField: '_id',
+  foreignField: 'userId',
+  justOne: true
+});
 
-// TODO: Export model
-// module.exports = mongoose.model('User', UserSchema);
+// Instance methods
+UserSchema.methods.isStudent = function() {
+  return this.role === 'STUDENT';
+};
+
+UserSchema.methods.isTutor = function() {
+  return this.role === 'TUTOR' || this.role === 'ADMIN';
+};
+
+UserSchema.methods.isActive = function() {
+  return this.status === 'ACTIVE';
+};
+
+UserSchema.methods.getIdentifier = function() {
+  return this.isStudent() ? this.mssv : this.maCB;
+};
+
+// Static methods
+UserSchema.statics.findByEmail = function(email) {
+  return this.findOne({ email: email.toLowerCase() });
+};
+
+UserSchema.statics.findByMSSV = function(mssv) {
+  return this.findOne({ mssv, role: 'STUDENT' });
+};
+
+UserSchema.statics.findByMaCB = function(maCB) {
+  return this.findOne({ maCB, role: { $in: ['TUTOR', 'ADMIN'] } });
+};
+
+// Pre-save validation
+UserSchema.pre('save', function(next) {
+  if (this.role === 'STUDENT' && !this.mssv) {
+    return next(new Error('MSSV is required for students'));
+  }
+  if ((this.role === 'TUTOR' || this.role === 'ADMIN') && !this.maCB) {
+    return next(new Error('Mã CB is required for tutors and admins'));
+  }
+  next();
+});
+
+// Enable virtuals in JSON
+UserSchema.set('toJSON', { virtuals: true });
+UserSchema.set('toObject', { virtuals: true });
+
+module.exports = mongoose.model('User', UserSchema);

@@ -208,8 +208,44 @@
 // OUTPUT:
 // - { data: [], pagination: {...} }
 
-// TODO: Implement StudentRepository class
-// class StudentRepository extends BaseRepository { ... }
+const BaseRepository = require('./BaseRepository');
+const Student = require('../models/Student.model');
 
-// TODO: Export singleton instance
-// module.exports = new StudentRepository()
+class StudentRepository extends BaseRepository {
+  constructor() {
+    super(Student);
+  }
+
+  async findByUserId(userId) {
+    return await this.model.findOne({ userId }).populate('userId');
+  }
+
+  async findByMSSV(mssv) {
+    return await this.model.findOne({ mssv }).populate('userId');
+  }
+
+  async updateStatistics(studentId, updates) {
+    const updateData = {};
+    Object.keys(updates).forEach(key => {
+      if (updates[key] !== undefined) {
+        updateData[`stats.${key}`] = updates[key];
+      }
+    });
+
+    return await this.model.findByIdAndUpdate(
+      studentId,
+      { $set: updateData },
+      { new: true }
+    );
+  }
+
+  async incrementStatistic(studentId, field) {
+    return await this.model.findByIdAndUpdate(
+      studentId,
+      { $inc: { [`stats.${field}`]: 1 } },
+      { new: true }
+    );
+  }
+}
+
+module.exports = new StudentRepository();

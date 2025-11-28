@@ -201,29 +201,50 @@
 //   "pagination": {...}
 // }
 
-// TODO: Import dependencies (TutorService, error classes)
+const TutorService = require('../services/user/TutorService');
+const { asyncHandler } = require('../middleware/errorMiddleware');
 
-// TODO: Implement searchTutors() - GET /api/v1/tutors/search
-// - Build query with filters (subjectId, type, minRating, isAcceptingStudents)
-// - Sort by averageRating DESC
-// - Return with pagination
+/**
+ * GET /api/v1/tutors/search
+ * Student searches for Tutors by subject (UC-07)
+ */
+const searchTutors = asyncHandler(async (req, res) => {
+  const { subjectId, type, minRating, isAcceptingStudents, page, limit } = req.query;
 
-// TODO: Implement getTutorDetails() - GET /api/v1/tutors/:id
-// - Query by id
-// - Populate user info
-// - Return full profile
+  const searchCriteria = {
+    subjectId,
+    type,
+    minRating: minRating ? parseFloat(minRating) : undefined,
+    isAcceptingStudents: isAcceptingStudents !== undefined ? isAcceptingStudents === 'true' : undefined,
+    page: page ? parseInt(page) : 1,
+    limit: limit ? parseInt(limit) : 20
+  };
 
-// TODO: Implement getMyProfile() - GET /api/v1/tutors/me
-// - Extract tutorId from JWT
-// - Return own profile
+  const result = await TutorService.searchTutors(searchCriteria);
 
-// TODO: Implement getMySessions() - GET /api/v1/tutors/me/sessions
-// - Filter by status, date range
-// - Return with pagination
+  res.status(200).json({
+    success: true,
+    data: result.data,
+    pagination: result.pagination
+  });
+});
 
-// TODO: Implement getMyEvaluations() - GET /api/v1/tutors/me/evaluations
-// - Query StudentEvaluation
-// - Handle anonymous evaluations
-// - Return with pagination
+/**
+ * GET /api/v1/tutors/:id
+ * Get Tutor details (public view)
+ */
+const getTutorDetails = asyncHandler(async (req, res) => {
+  const { id } = req.params;
 
-// TODO: Export controller functions
+  const tutor = await TutorService.getTutorDetails(id);
+
+  res.status(200).json({
+    success: true,
+    data: tutor
+  });
+});
+
+module.exports = {
+  searchTutors,
+  getTutorDetails
+};

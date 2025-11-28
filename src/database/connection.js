@@ -184,11 +184,117 @@
 // 
 // startServer()
 
-// TODO: Export functions
-// module.exports = {
-//   connectDB,
-//   disconnectDB,
-//   getConnectionStatus,
-//   healthCheck,
-//   connectWithRetry
-// }
+const mongoose = require('mongoose');
+const { databaseConfig } = require('../config/database.config');
+
+let connection = null;
+
+/**
+ * Connect to MongoDB with singleton pattern
+ */
+const connectDB = async () => {
+  // Check if connection already exists
+  if (connection) {
+    console.log('[DATABASE] Using existing connection');
+    return connection;
+  }
+
+  try {
+    console.log('[DATABASE] Connecting to MongoDB...');
+    
+    connection = await mongoose.connect(databaseConfig.uri, databaseConfig.options);
+    
+    console.log(`[DATABASE] Connected to MongoDB: ${connection.connection.host}`);
+    
+    // Register event listeners
+    mongoose.connection.on('connected', () => {
+      console.log('[DATABASE] Mongoose connected');
+    });
+    
+    mongoose.connection.on('error', (err) => {
+      console.error('[DATABASE] Mongoose connection error:', err);
+    });
+    
+    mongoose.connection.on('disconnected', () => {
+      console.log('[DATABASE] Mongoose disconnected');
+    });
+    
+    return connection;
+    
+  } catch (error) {
+    console.error('[DATABASE] Failed to connect to MongoDB:', error);
+    throw error;
+  }
+};
+
+/**
+ * Disconnect from MongoDB
+ */
+const disconnectDB = async () => {
+  if (!connection) {
+    return;
+  }
+
+  try {
+    await mongoose.connection.close();
+    connection = null;
+    console.log('[DATABASE] Disconnected from MongoDB');
+  } catch (error) {
+    console.error('[DATABASE] Error disconnecting:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get connection status
+ */
+const getConnectionStatus = () => {
+  if (!connection) {
+    return 'DISCONNECTED';
+  }
+
+  const states = {
+    0: 'DISCONNECTED',
+    1: 'CONNECTED',
+    2: 'CONNECTING',
+    3: 'DISCONNECTING'
+  };
+
+  return states[mongoose.connection.readyState] || 'UNKNOWN';
+};
+
+/**
+ * Health check for database
+ */
+const healthCheck = async () => {
+  try {
+    if (!connection) {
+      return {
+        status: 'DOWN',
+        message: 'No connection established'
+      };
+    }
+
+    // Ping database
+    await mongoose.connection.db.admin().ping();
+
+    return {
+      status: 'UP',
+      message: 'Database is healthy',
+      host: mongoose.connection.host,
+      database: mongoose.connection.name
+    };
+  } catch (error) {
+    return {
+      status: 'DOWN',
+      message: error.message
+    };
+  }
+};
+
+module.exports = {
+  connectDB,
+  disconnectDB,
+  getConnectionStatus,
+  healthCheck
+};

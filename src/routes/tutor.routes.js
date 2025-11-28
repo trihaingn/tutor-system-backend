@@ -97,4 +97,23 @@
 //   tutorController.getMyEvaluations
 // )
 
-// TODO: Initialize router, define routes, export
+const express = require('express');
+const router = express.Router();
+const tutorController = require('../controllers/tutor.controller');
+const { authMiddleware } = require('../middleware/authMiddleware');
+
+// GET /api/v1/tutors/search - Search tutors
+router.get(
+  '/search',
+  authMiddleware,
+  tutorController.searchTutors
+);
+
+// GET /api/v1/tutors/:id - Get tutor details
+router.get(
+  '/:id',
+  authMiddleware,
+  tutorController.getTutorDetails
+);
+
+module.exports = router;

@@ -57,10 +57,89 @@
  * - averageRating được update mỗi khi có StudentEvaluation mới (EvaluationService)
  */
 
-// TODO: Import mongoose
+const mongoose = require('mongoose');
 
-// TODO: Định nghĩa TutorSchema với các trường như trên
+const TutorSchema = new mongoose.Schema(
+  {
+    // Reference to User
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      unique: true,
+      index: true
+    },
+    
+    // Identification
+    maCB: {
+      type: String,
+      required: true,
+      unique: true,
+      index: true
+    },
+    
+    // Tutor Type
+    type: {
+      type: String,
+      enum: ['LECTURER', 'RESEARCH_STUDENT', 'SENIOR_STUDENT'],
+      required: true,
+      index: true
+    },
+    
+    // Expertise & Subjects
+    expertise: [
+      {
+        subjectId: { type: String, required: true },
+        subjectName: { type: String, required: true },
+        yearsOfExperience: { type: Number, default: 0 }
+      }
+    ],
+    bio: {
+      type: String,
+      maxlength: 1000,
+      default: ''
+    },
+    researchInterests: [String],
+    
+    // Availability Settings
+    maxStudentsPerSlot: {
+      type: Number,
+      default: 3,
+      min: 1,
+      max: 20
+    },
+    preferredSessionType: {
+      type: String,
+      enum: ['ONLINE', 'OFFLINE', 'BOTH'],
+      default: 'BOTH'
+    },
+    
+    // Statistics
+    stats: {
+      totalStudents: { type: Number, default: 0 },
+      totalSessions: { type: Number, default: 0 },
+      completedSessions: { type: Number, default: 0 },
+      cancelledSessions: { type: Number, default: 0 },
+      averageRating: { type: Number, default: 0 },
+      totalReviews: { type: Number, default: 0 }
+    },
+    
+    // Status
+    isAcceptingStudents: {
+      type: Boolean,
+      default: true
+    }
+  },
+  {
+    timestamps: true,
+    collection: 'tutors'
+  }
+);
 
-// TODO: Thêm indexes
+// Indexes
+TutorSchema.index({ userId: 1 });
+TutorSchema.index({ maCB: 1 });
+TutorSchema.index({ type: 1, 'stats.averageRating': -1 });
+TutorSchema.index({ 'expertise.subjectId': 1 });
 
-// TODO: Export model
+module.exports = mongoose.model('Tutor', TutorSchema);

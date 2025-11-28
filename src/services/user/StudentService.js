@@ -113,12 +113,50 @@
 // OUTPUT:
 // - Return { success: true }
 
-// TODO: Import Student, User, Appointment, StudentEvaluation models
-// TODO: Import error classes (NotFoundError)
+const Student = require('../../models/Student.model');
+const { NotFoundError } = require('../../middleware/errorMiddleware');
+const StudentRepository = require('../../repositories/StudentRepository');
 
-// TODO: Implement getStudentProfile(studentId)
-// TODO: Implement getStudentAppointmentHistory(studentId, filters)
-// TODO: Implement getStudentEvaluationHistory(studentId, filters)
-// TODO: Implement updateStudentStatistics(studentId, updates)
+/**
+ * Lấy full profile của Student (UC-06)
+ */
+async function getStudentProfile(studentId) {
+  const student = await Student.findById(studentId)
+    .populate('userId', 'email fullName faculty status');
+  
+  if (!student) {
+    throw new NotFoundError('Student không tồn tại');
+  }
 
-// TODO: Export all functions
+  return {
+    studentId: student._id,
+    user: student.userId,
+    mssv: student.mssv,
+    major: student.major,
+    enrollmentYear: student.enrollmentYear,
+    currentYear: student.currentYear,
+    gpa: student.gpa,
+    totalCredits: student.totalCredits,
+    statistics: {
+      registeredTutors: student.registeredTutors,
+      totalSessionsAttended: student.totalSessionsAttended,
+      totalAppointments: student.totalAppointments,
+      completedAppointments: student.completedAppointments,
+      cancelledAppointments: student.cancelledAppointments,
+      averageRatingGiven: student.averageRatingGiven
+    }
+  };
+}
+
+/**
+ * Update Student statistics
+ */
+async function updateStudentStatistics(studentId, updates) {
+  await StudentRepository.update(studentId, updates);
+  return { success: true };
+}
+
+module.exports = {
+  getStudentProfile,
+  updateStudentStatistics
+};

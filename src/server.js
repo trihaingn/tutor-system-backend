@@ -159,10 +159,80 @@
 //   process.exit(1)
 // })
 
-// ============================================================
-// START SERVER
-// ============================================================
-// PURPOSE: Execute server startup
-// 
-// PSEUDOCODE:
-// startServer()
+require('dotenv').config();
+const app = require('./app');
+const { connectDB, disconnectDB } = require('./database/connection');
+
+const PORT = process.env.PORT || 5000;
+const NODE_ENV = process.env.NODE_ENV || 'development';
+
+/**
+ * Start server with all dependencies
+ */
+const startServer = async () => {
+  try {
+    // Connect to MongoDB
+    await connectDB();
+    console.log('✓ MongoDB connected successfully');
+
+    // Start Express server
+    const server = app.listen(PORT, () => {
+      console.log(`✓ Server running on port ${PORT}`);
+      console.log(`✓ Environment: ${NODE_ENV}`);
+      console.log(`✓ API: http://localhost:${PORT}/api/v1`);
+      console.log(`✓ Health check: http://localhost:${PORT}/health`);
+    });
+
+    // Setup graceful shutdown
+    setupGracefulShutdown(server);
+
+  } catch (error) {
+    console.error('Failed to start server:', error);
+    process.exit(1);
+  }
+};
+
+/**
+ * Graceful shutdown handler
+ */
+const setupGracefulShutdown = (server) => {
+  const shutdown = async (signal) => {
+    console.log(`\n${signal} received. Starting graceful shutdown...`);
+
+    // Stop accepting new connections
+    server.close(() => {
+      console.log('✓ HTTP server closed');
+    });
+
+    try {
+      // Disconnect from MongoDB
+      await disconnectDB();
+      console.log('✓ MongoDB disconnected');
+      console.log('✓ Graceful shutdown completed');
+      process.exit(0);
+    } catch (error) {
+      console.error('Error during shutdown:', error);
+      process.exit(1);
+    }
+  };
+
+  // Listen for termination signals
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
+};
+
+/**
+ * Handle uncaught errors
+ */
+process.on('uncaughtException', (error) => {
+  console.error('UNCAUGHT EXCEPTION! Shutting down...', error);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('UNHANDLED REJECTION! Shutting down...', reason);
+  process.exit(1);
+});
+
+// Start server
+startServer();

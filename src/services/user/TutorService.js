@@ -153,13 +153,96 @@
 // OUTPUT:
 // - Return { averageRating, totalReviews }
 
-// TODO: Import Tutor, User, ConsultationSession, StudentEvaluation models
-// TODO: Import error classes (NotFoundError)
+const Tutor = require('../../models/Tutor.model');
+const { NotFoundError, ValidationError } = require('../../middleware/errorMiddleware');
+const TutorRepository = require('../../repositories/TutorRepository');
 
-// TODO: Implement searchTutors(searchCriteria)
-// TODO: Implement getTutorDetails(tutorId)
-// TODO: Implement getTutorSessions(tutorId, filters)
-// TODO: Implement getTutorEvaluations(tutorId, filters)
-// TODO: Implement updateTutorRating(tutorId)
+/**
+ * Student search Tutors theo subject (UC-07)
+ */
+async function searchTutors(searchCriteria) {
+  const query = {};
+  
+  if (searchCriteria.subjectId) {
+    query['expertise.subjectId'] = searchCriteria.subjectId;
+  }
+  
+  if (searchCriteria.type) {
+    query.type = searchCriteria.type;
+  }
+  
+  if (searchCriteria.minRating) {
+    query.averageRating = { $gte: searchCriteria.minRating };
+  }
+  
+  if (searchCriteria.isAcceptingStudents !== undefined) {
+    query.isAcceptingStudents = searchCriteria.isAcceptingStudents;
+  } else {
+    query.isAcceptingStudents = true; // Default: only accepting tutors
+  }
 
-// TODO: Export all functions
+  const page = searchCriteria.page || 1;
+  const limit = searchCriteria.limit || 20;
+  const skip = (page - 1) * limit;
+
+  const tutors = await Tutor.find(query)
+    .populate('userId', 'fullName email faculty')
+    .sort({ averageRating: -1, totalReviews: -1 })
+    .skip(skip)
+    .limit(limit);
+
+  const total = await Tutor.countDocuments(query);
+
+  return {
+    data: tutors,
+    pagination: {
+      currentPage: page,
+      totalPages: Math.ceil(total / limit),
+      totalItems: total,
+      itemsPerPage: limit
+    }
+  };
+}
+
+/**
+ * Lấy chi tiết Tutor profile (public view)
+ */
+async function getTutorDetails(tutorId) {
+  const tutor = await Tutor.findById(tutorId)
+    .populate('userId', 'fullName email faculty');
+  
+  if (!tutor) {
+    throw new NotFoundError('Tutor không tồn tại');
+  }
+
+  return {
+    tutorId: tutor._id,
+    user: tutor.userId,
+    maCB: tutor.maCB,
+    type: tutor.type,
+    expertise: tutor.expertise,
+    bio: tutor.bio,
+    statistics: {
+      totalStudents: tutor.totalStudents,
+      totalSessions: tutor.totalSessions,
+      completedSessions: tutor.completedSessions,
+      averageRating: tutor.averageRating,
+      totalReviews: tutor.totalReviews
+    },
+    isAcceptingStudents: tutor.isAcceptingStudents
+  };
+}
+
+/**
+ * Update Tutor rating (called when new evaluation added)
+ */
+async function updateTutorRating(tutorId, newRating, totalReviews) {
+  await TutorRepository.updateRating(tutorId, newRating, totalReviews);
+  return { success: true };
+}
+
+module.exports = {
+  searchTutors,
+  getTutorDetails,
+  updateTutorRating
+};

@@ -131,10 +131,61 @@
 // PSEUDOCODE:
 // app.use(errorMiddleware)
 
-// ============================================================
-// EXPORT APP
-// ============================================================
-// PURPOSE: Export app để sử dụng trong server.js
-// 
-// PSEUDOCODE:
-// module.exports = app
+const express = require('express');
+const cookieParser = require('cookie-parser');
+const cors = require('cors');
+
+// Import middleware
+const { errorHandler } = require('./middleware/errorMiddleware');
+const corsMiddleware = require('./middleware/corsMiddleware');
+
+// Import routes
+const routes = require('./routes');
+
+// Initialize Express app
+const app = express();
+
+// CORS middleware
+app.use(corsMiddleware);
+
+// Body parser middleware
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Cookie parser middleware
+app.use(cookieParser());
+
+// Logging middleware (simple console logging for dev)
+if (process.env.NODE_ENV === 'development') {
+  app.use((req, res, next) => {
+    console.log(`${req.method} ${req.path}`);
+    next();
+  });
+}
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'UP',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// Mount API routes
+app.use('/api/v1', routes);
+
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `Route ${req.originalUrl} not found`,
+    statusCode: 404
+  });
+});
+
+// Global error handling middleware (must be last)
+app.use(errorHandler);
+
+module.exports = app;

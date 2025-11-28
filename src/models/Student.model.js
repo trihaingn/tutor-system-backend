@@ -49,35 +49,82 @@
  * - Statistics tự động cập nhật bởi Services (không manual update)
  */
 
-// TODO: Import mongoose
-// const mongoose = require('mongoose');
+const mongoose = require('mongoose');
 
-// TODO: Định nghĩa StudentSchema
-// const StudentSchema = new mongoose.Schema({
-//   userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true, unique: true, index: true },
-//   mssv: { type: String, required: true, unique: true, index: true },
-//   major: { type: String, required: true },
-//   enrollmentYear: { type: Number, required: true },
-//   currentYear: { type: Number, min: 1, max: 6, default: 1 },
-//   gpa: { type: Number, min: 0.0, max: 4.0, default: null },
-//   totalCredits: { type: Number, default: 0 },
-//   registeredTutors: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Tutor' }],
-//   totalSessionsAttended: { type: Number, default: 0 },
-//   stats: {
-//     totalAppointments: { type: Number, default: 0 },
-//     completedAppointments: { type: Number, default: 0 },
-//     cancelledAppointments: { type: Number, default: 0 },
-//     averageRatingGiven: { type: Number, default: 0 }
-//   }
-// }, {
-//   timestamps: true,
-//   collection: 'students'
-// });
+const StudentSchema = new mongoose.Schema(
+  {
+    // Reference to User
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+      unique: true,
+      index: true
+    },
+    
+    // Academic Information
+    mssv: {
+      type: String,
+      required: true,
+      unique: true,
+      index: true
+    },
+    major: {
+      type: String,
+      required: true
+    },
+    enrollmentYear: {
+      type: Number,
+      required: true
+    },
+    currentYear: {
+      type: Number,
+      min: 1,
+      max: 6,
+      default: 1
+    },
+    
+    // Academic Status
+    gpa: {
+      type: Number,
+      min: 0.0,
+      max: 4.0,
+      default: null
+    },
+    totalCredits: {
+      type: Number,
+      default: 0
+    },
+    
+    // Tutor Program Participation
+    registeredTutors: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Tutor'
+      }
+    ],
+    totalSessionsAttended: {
+      type: Number,
+      default: 0
+    },
+    
+    // Statistics
+    stats: {
+      totalAppointments: { type: Number, default: 0 },
+      completedAppointments: { type: Number, default: 0 },
+      cancelledAppointments: { type: Number, default: 0 },
+      averageRatingGiven: { type: Number, default: 0 }
+    }
+  },
+  {
+    timestamps: true,
+    collection: 'students'
+  }
+);
 
-// TODO: Thêm indexes
-// StudentSchema.index({ userId: 1 });
-// StudentSchema.index({ mssv: 1 });
-// StudentSchema.index({ major: 1, enrollmentYear: 1 });
+// Indexes
+StudentSchema.index({ userId: 1 });
+StudentSchema.index({ mssv: 1 });
+StudentSchema.index({ major: 1, enrollmentYear: 1 });
 
-// TODO: Export model
-// module.exports = mongoose.model('Student', StudentSchema);
+module.exports = mongoose.model('Student', StudentSchema);

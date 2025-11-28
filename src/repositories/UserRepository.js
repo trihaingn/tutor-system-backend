@@ -157,8 +157,68 @@
 // OUTPUT:
 // - Array of active Users
 
-// TODO: Implement UserRepository class
-// class UserRepository extends BaseRepository { ... }
+const BaseRepository = require('./BaseRepository');
+const User = require('../models/User.model');
+const Student = require('../models/Student.model');
+const Tutor = require('../models/Tutor.model');
 
-// TODO: Export singleton instance
-// module.exports = new UserRepository()
+class UserRepository extends BaseRepository {
+  constructor() {
+    super(User);
+  }
+
+  async findByEmail(email) {
+    return await this.model
+      .findOne({ email: email.toLowerCase() })
+      .populate('student')
+      .populate('tutor');
+  }
+
+  async findByMSSV(mssv) {
+    const student = await Student.findOne({ mssv });
+    if (!student) return null;
+
+    return await this.model
+      .findById(student.userId)
+      .populate('student')
+      .populate('tutor');
+  }
+
+  async findByMaCB(maCB) {
+    const tutor = await Tutor.findOne({ maCB });
+    if (!tutor) return null;
+
+    return await this.model
+      .findById(tutor.userId)
+      .populate('student')
+      .populate('tutor');
+  }
+
+  async findUsersNeedSync() {
+    const cutoffTime = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    return await this.model
+      .find({
+        $or: [{ lastSyncAt: null }, { lastSyncAt: { $lt: cutoffTime } }]
+      })
+      .populate('student')
+      .populate('tutor')
+      .limit(100);
+  }
+
+  async updateLastSync(userId) {
+    return await this.model.findByIdAndUpdate(
+      userId,
+      { lastSyncAt: new Date() },
+      { new: true }
+    );
+  }
+
+  async findActiveUsers() {
+    return await this.model
+      .find({ status: 'ACTIVE' })
+      .select('-__v')
+      .sort({ createdAt: -1 });
+  }
+}
+
+module.exports = new UserRepository();

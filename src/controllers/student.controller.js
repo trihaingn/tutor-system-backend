@@ -128,21 +128,35 @@
 //   "pagination": {...}
 // }
 
-// TODO: Import dependencies (StudentService, error classes)
+const StudentService = require('../services/user/StudentService');
+const StudentRepository = require('../repositories/StudentRepository');
+const { asyncHandler } = require('../middleware/errorMiddleware');
+const { ValidationError } = require('../middleware/errorMiddleware');
 
-// TODO: Implement getMyProfile() - GET /api/v1/students/me
-// - Extract studentId from JWT
-// - Query Student model with populate
-// - Return profile with statistics
+/**
+ * GET /api/v1/students/me
+ * Student views own profile (UC-06)
+ */
+const getMyProfile = asyncHandler(async (req, res) => {
+  // Get userId from authenticated user
+  const userId = req.userId;
+  
+  // Find student by userId
+  const student = await StudentRepository.findByUserId(userId);
+  
+  if (!student) {
+    throw new ValidationError('User is not a student');
+  }
 
-// TODO: Implement getMyAppointments() - GET /api/v1/students/me/appointments
-// - Filter by status
-// - Populate session and tutor info
-// - Return with pagination
+  // Get full profile
+  const profile = await StudentService.getStudentProfile(student._id);
 
-// TODO: Implement getMyEvaluations() - GET /api/v1/students/me/evaluations
-// - Query StudentEvaluation model
-// - Populate tutor and session
-// - Return with pagination
+  res.status(200).json({
+    success: true,
+    data: profile
+  });
+});
 
-// TODO: Export controller functions
+module.exports = {
+  getMyProfile
+};

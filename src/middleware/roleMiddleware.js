@@ -10,8 +10,9 @@
  * router.post('/sessions', authMiddleware, roleMiddleware(['TUTOR', 'ADMIN']), controller)
  */
 
-// TODO: Import constants
-// const { ROLES, ERROR_MESSAGES, HTTP_STATUS } = require('../constants')
+/**
+ * Role-Based Access Control (RBAC) Middleware
+ */
 
 // ============================================================
 // MIDDLEWARE: roleMiddleware(allowedRoles)
@@ -91,12 +92,48 @@
 //   }
 // }
 
-// TODO: Implement roleMiddleware factory
-// TODO: Export roleMiddleware and helper functions
-// module.exports = {
-//   roleMiddleware,
-//   isStudent,
-//   isTutor,
-//   isAdmin,
-//   isStudentOrTutor
-// }
+const roleMiddleware = (allowedRoles) => {
+  return async (req, res, next) => {
+    try {
+      // Check if authMiddleware has run
+      if (!req.user || !req.userRole) {
+        return res.status(401).json({
+          success: false,
+          message: 'Authentication required. Please login first.'
+        });
+      }
+
+      // Check if user's role is in allowedRoles
+      if (!allowedRoles.includes(req.userRole)) {
+        return res.status(403).json({
+          success: false,
+          message: 'Insufficient permissions to access this resource.',
+          required: allowedRoles,
+          current: req.userRole
+        });
+      }
+
+      next();
+    } catch (error) {
+      return res.status(500).json({
+        success: false,
+        message: 'Authorization error',
+        error: error.message
+      });
+    }
+  };
+};
+
+// Helper middlewares for common role checks
+const isStudent = roleMiddleware(['STUDENT']);
+const isTutor = roleMiddleware(['TUTOR', 'ADMIN']);
+const isAdmin = roleMiddleware(['ADMIN']);
+const isStudentOrTutor = roleMiddleware(['STUDENT', 'TUTOR', 'ADMIN']);
+
+module.exports = {
+  roleMiddleware,
+  isStudent,
+  isTutor,
+  isAdmin,
+  isStudentOrTutor
+};

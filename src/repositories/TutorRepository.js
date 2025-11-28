@@ -303,8 +303,118 @@
 // OUTPUT:
 // - Array of top-rated Tutors
 
-// TODO: Implement TutorRepository class
-// class TutorRepository extends BaseRepository { ... }
+const BaseRepository = require('./BaseRepository');
+const Tutor = require('../models/Tutor.model');
 
-// TODO: Export singleton instance
-// module.exports = new TutorRepository()
+class TutorRepository extends BaseRepository {
+  constructor() {
+    super(Tutor);
+  }
+
+  async findByUserId(userId) {
+    return await this.model.findOne({ userId }).populate('userId');
+  }
+
+  async findByMaCB(maCB) {
+    return await this.model.findOne({ maCB }).populate('userId');
+  }
+
+  async searchTutors(criteria, options = {}) {
+    const filter = {};
+
+    if (criteria.subjectId) {
+      filter['expertise.subjectId'] = criteria.subjectId;
+    }
+    if (criteria.type) {
+      filter.type = criteria.type;
+    }
+    if (criteria.minRating) {
+      filter['stats.averageRating'] = { $gte: criteria.minRating };
+    }
+    if (criteria.isAcceptingStudents !== undefined) {
+      filter.isAcceptingStudents = criteria.isAcceptingStudents;
+    }
+
+    const page = options.page || 1;
+    const limit = options.limit || 10;
+    const skip = (page - 1) * limit;
+
+    const tutors = await this.model
+      .find(filter)
+      .populate('userId', 'email fullName faculty')
+      .sort(options.sort || { 'stats.averageRating': -1, 'stats.totalReviews': -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await this.model.countDocuments(filter);
+
+    return {
+      data: tutors,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    };
+  }
+
+  async updateStatistics(tutorId, updates) {
+    const updateData = {};
+    Object.keys(updates).forEach(key => {
+      if (updates[key] !== undefined) {
+        updateData[`stats.${key}`] = updates[key];
+      }
+    });
+
+    return await this.model.findByIdAndUpdate(
+      tutorId,
+      { $set: updateData },
+      { new: true }
+    );
+  }
+
+  async incrementStatistic(tutorId, field) {
+    return await this.model.findByIdAndUpdate(
+      tutorId,
+      { $inc: { [`stats.${field}`]: 1 } },
+      { new: true }
+    );
+  }
+
+  async updateRating(tutorId, newRating) {
+    const tutor = await this.model.findById(tutorId);
+    if (!tutor) throw new Error('Tutor not found');
+
+    const currentTotal = tutor.stats.averageRating * tutor.stats.totalReviews;
+    const newTotalReviews = tutor.stats.totalReviews + 1;
+    const newAverage = (currentTotal + newRating) / newTotalReviews;
+
+    return await this.model.findByIdAndUpdate(
+      tutorId,
+      {
+        $set: {
+          'stats.averageRating': parseFloat(newAverage.toFixed(2)),
+          'stats.totalReviews': newTotalReviews
+        }
+      },
+      { new: true }
+    );
+  }
+
+  async getTopRatedTutors(limit = 10) {
+    return await this.model
+      .find({
+        isAcceptingStudents: true,
+        'stats.averageRating': { $gte: 4.0 }
+      })
+      .populate('userId', 'fullName email faculty')
+      .sort({
+        'stats.averageRating': -1,
+        'stats.totalReviews': -1
+      })
+      .limit(limit);
+  }
+}
+
+module.exports = new TutorRepository();

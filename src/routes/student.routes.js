@@ -59,4 +59,18 @@
 //   studentController.getMyEvaluations
 // )
 
-// TODO: Initialize router, define routes, export
+const express = require('express');
+const router = express.Router();
+const studentController = require('../controllers/student.controller');
+const { authMiddleware } = require('../middleware/authMiddleware');
+const { roleMiddleware } = require('../middleware/roleMiddleware');
+
+// GET /api/v1/students/me - Get my profile
+router.get(
+  '/me',
+  authMiddleware,
+  roleMiddleware(['STUDENT']),
+  studentController.getMyProfile
+);
+
+module.exports = router;

@@ -10,9 +10,10 @@
  * - Hide sensitive info in production
  */
 
-// TODO: Import logger, constants
-// const logger = require('../utils/logger')
-// const { HTTP_STATUS } = require('../constants')
+/**
+ * Error Handling Middleware
+ * Global error handler for Express application
+ */
 
 // ============================================================
 // MIDDLEWARE: errorHandler
@@ -154,17 +155,119 @@
 //   }
 // }
 
-// TODO: Implement errorHandler middleware
-// TODO: Implement notFoundHandler middleware
-// TODO: Implement asyncHandler utility
-// TODO: Export all functions
-// module.exports = {
-//   errorHandler,
-//   notFoundHandler,
-//   asyncHandler,
-//   AppError,
-//   AuthenticationError,
-//   AuthorizationError,
-//   NotFoundError,
-//   ValidationError
-// }
+// Custom Error Classes
+class AppError extends Error {
+  constructor(message, statusCode) {
+    super(message);
+    this.statusCode = statusCode;
+    this.name = this.constructor.name;
+    Error.captureStackTrace(this, this.constructor);
+  }
+}
+
+class AuthenticationError extends AppError {
+  constructor(message = 'Authentication failed') {
+    super(message, 401);
+  }
+}
+
+class AuthorizationError extends AppError {
+  constructor(message = 'Insufficient permissions') {
+    super(message, 403);
+  }
+}
+
+class NotFoundError extends AppError {
+  constructor(message = 'Resource not found') {
+    super(message, 404);
+  }
+}
+
+class ValidationError extends AppError {
+  constructor(message = 'Validation failed', errors = null) {
+    super(message, 400);
+    this.errors = errors;
+  }
+}
+
+class ConflictError extends AppError {
+  constructor(message = 'Resource conflict') {
+    super(message, 409);
+  }
+}
+
+// Error Handler Middleware
+const errorHandler = (err, req, res, next) => {
+  // Log error
+  console.error('Error:', {
+    message: err.message,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined,
+    url: req.originalUrl,
+    method: req.method,
+    userId: req.userId || null
+  });
+
+  // Determine status code
+  let statusCode = err.statusCode || 500;
+  let message = err.message || 'Internal Server Error';
+  let errors = err.errors || null;
+
+  // Handle Mongoose validation errors
+  if (err.name === 'ValidationError') {
+    statusCode = 400;
+    message = 'Validation Error';
+    errors = Object.values(err.errors).map(e => ({
+      field: e.path,
+      message: e.message
+    }));
+  }
+
+  // Handle Mongoose CastError (invalid ObjectId)
+  if (err.name === 'CastError') {
+    statusCode = 400;
+    message = `Invalid ${err.path}: ${err.value}`;
+  }
+
+  // Handle Mongoose duplicate key error
+  if (err.code === 11000) {
+    statusCode = 409;
+    message = 'Duplicate Entry';
+    const field = Object.keys(err.keyPattern)[0];
+    const value = Object.values(err.keyValue)[0];
+    errors = { field, value, message: `${field} '${value}' already exists` };
+  }
+
+  // Send error response
+  res.status(statusCode).json({
+    success: false,
+    message,
+    statusCode,
+    errors,
+    stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
+  });
+};
+
+// 404 Not Found Handler
+const notFoundHandler = (req, res, next) => {
+  const error = new NotFoundError(`Route ${req.originalUrl} not found`);
+  next(error);
+};
+
+// Async Handler Utility
+const asyncHandler = (fn) => {
+  return (req, res, next) => {
+    Promise.resolve(fn(req, res, next)).catch(next);
+  };
+};
+
+module.exports = {
+  errorHandler,
+  notFoundHandler,
+  asyncHandler,
+  AppError,
+  AuthenticationError,
+  AuthorizationError,
+  NotFoundError,
+  ValidationError,
+  ConflictError
+};

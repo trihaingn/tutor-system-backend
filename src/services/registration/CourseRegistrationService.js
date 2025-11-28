@@ -254,21 +254,215 @@
 // OUTPUT:
 // - Return { success: true, registration }
 
-// TODO: Import models (CourseRegistration, Student, Tutor)
-// TODO: Import NotificationService
-// TODO: Import error classes (ValidationError, ConflictError, NotFoundError, ForbiddenError)
+const CourseRegistration = require('../../models/CourseRegistration.model');
+const Student = require('../../models/Student.model');
+const Tutor = require('../../models/Tutor.model');
+const CourseRegistrationRepository = require('../../repositories/CourseRegistrationRepository');
+const { 
+  ValidationError, 
+  ConflictError, 
+  NotFoundError, 
+  AuthorizationError 
+} = require('../../middleware/errorMiddleware');
 
-// TODO: Implement validateRegistrationData(studentId, tutorId, subjectId)
+/**
+ * Validate registration data
+ */
+async function validateRegistrationData(studentId, tutorId, subjectId) {
+  if (!studentId || !tutorId || !subjectId) {
+    throw new ValidationError('Thiếu thông tin bắt buộc');
+  }
 
-// TODO: Implement checkDuplicateRegistration(studentId, tutorId, subjectId)
+  // Validate Student exists and active
+  const student = await Student.findById(studentId).populate('userId');
+  if (!student) {
+    throw new NotFoundError('Student không tồn tại');
+  }
+  if (student.userId.status !== 'ACTIVE') {
+    throw new AuthorizationError('Tài khoản Student không hoạt động');
+  }
 
-// TODO: Implement registerCourse(studentId, tutorId, subjectId)
-// ⚠️ CRITICAL: Remember BR-005 - status='ACTIVE', approvedBy='SYSTEM'
+  // Validate Tutor exists and active
+  const tutor = await Tutor.findById(tutorId).populate('userId');
+  if (!tutor) {
+    throw new NotFoundError('Tutor không tồn tại');
+  }
+  if (tutor.userId.status !== 'ACTIVE') {
+    throw new AuthorizationError('Tài khoản Tutor không hoạt động');
+  }
 
-// TODO: Implement getStudentRegistrations(studentId, filters)
+  // Validate Tutor has expertise in this subject
+  const hasExpertise = tutor.expertise.some(exp => exp.subjectId === subjectId);
+  if (!hasExpertise) {
+    throw new ValidationError('Tutor không dạy môn học này');
+  }
 
-// TODO: Implement getTutorRegistrations(tutorId, filters)
+  // Validate Tutor is accepting students
+  if (tutor.isAcceptingStudents === false) {
+    throw new AuthorizationError('Tutor hiện không nhận học sinh mới');
+  }
 
-// TODO: Implement cancelRegistration(registrationId, studentId)
+  return { student, tutor };
+}
 
-// TODO: Export all functions
+/**
+ * Check duplicate registration (BR-006)
+ */
+async function checkDuplicateRegistration(studentId, tutorId, subjectId) {
+  const isDuplicate = await CourseRegistrationRepository.checkDuplicate(
+    studentId,
+    tutorId,
+    subjectId
+  );
+
+  return isDuplicate;
+}
+
+/**
+ * Register course with tutor (UC-08)
+ * BR-005: INSTANT APPROVAL
+ * BR-006: No duplicates
+ * BR-008: Send notification to tutor
+ */
+async function registerCourse(studentId, tutorId, subjectId) {
+  // Step 1: Validate data
+  const { student, tutor } = await validateRegistrationData(studentId, tutorId, subjectId);
+
+  // Step 2: BR-006 - Check duplicate
+  const isDuplicate = await checkDuplicateRegistration(studentId, tutorId, subjectId);
+  if (isDuplicate) {
+    throw new ConflictError('Bạn đã đăng ký môn học này với Tutor này rồi');
+  }
+
+  // Step 3: BR-005 - INSTANT APPROVAL (Version 2.0)
+  const registration = await CourseRegistration.create({
+    studentId,
+    tutorId,
+    subjectId,
+    status: 'ACTIVE',              // INSTANT: No approval workflow
+    registeredAt: new Date(),
+    approvedAt: new Date(),         // INSTANT: Approved immediately
+    approvedBy: 'SYSTEM'            // INSTANT: System approval
+  });
+
+  // Step 4: Update Student statistics
+  await Student.findByIdAndUpdate(
+    studentId,
+    { $inc: { registeredTutors: 1 } }
+  );
+
+  // Step 5: Update Tutor statistics
+  await Tutor.findByIdAndUpdate(
+    tutorId,
+    { $inc: { totalStudents: 1 } }
+  );
+
+  // Step 6: BR-008 - Send notification to Tutor
+  // Note: NotificationService would be called here in full implementation
+  // await NotificationService.sendNotification({...})
+
+  // Step 7: Populate and return
+  await registration.populate([
+    { path: 'studentId', populate: { path: 'userId' } },
+    { path: 'tutorId', populate: { path: 'userId' } }
+  ]);
+
+  return registration;
+}
+
+/**
+ * Get student's registrations
+ */
+async function getStudentRegistrations(studentId, filters = {}) {
+  const query = { studentId };
+
+  if (filters.status) {
+    query.status = filters.status;
+  }
+
+  if (filters.subjectId) {
+    query.subjectId = filters.subjectId;
+  }
+
+  const registrations = await CourseRegistration.find(query)
+    .populate({
+      path: 'tutorId',
+      populate: { path: 'userId', select: 'fullName email' }
+    })
+    .sort({ registeredAt: -1 });
+
+  return registrations;
+}
+
+/**
+ * Get tutor's registrations
+ */
+async function getTutorRegistrations(tutorId, filters = {}) {
+  const query = { tutorId };
+
+  if (filters.status) {
+    query.status = filters.status;
+  } else {
+    query.status = 'ACTIVE'; // Default: only active
+  }
+
+  if (filters.subjectId) {
+    query.subjectId = filters.subjectId;
+  }
+
+  const registrations = await CourseRegistration.find(query)
+    .populate({
+      path: 'studentId',
+      populate: { path: 'userId', select: 'fullName email' }
+    })
+    .sort({ registeredAt: -1 });
+
+  return registrations;
+}
+
+/**
+ * Cancel registration
+ */
+async function cancelRegistration(registrationId, studentId) {
+  const registration = await CourseRegistration.findById(registrationId);
+
+  if (!registration) {
+    throw new NotFoundError('Registration không tồn tại');
+  }
+
+  // Validate ownership
+  if (registration.studentId.toString() !== studentId.toString()) {
+    throw new AuthorizationError('Bạn không phải chủ registration này');
+  }
+
+  // Check if already cancelled
+  if (registration.status === 'CANCELLED') {
+    throw new ConflictError('Registration đã bị hủy rồi');
+  }
+
+  // Update status
+  registration.status = 'CANCELLED';
+  await registration.save();
+
+  // Update statistics
+  await Student.findByIdAndUpdate(
+    studentId,
+    { $inc: { registeredTutors: -1 } }
+  );
+
+  await Tutor.findByIdAndUpdate(
+    registration.tutorId,
+    { $inc: { totalStudents: -1 } }
+  );
+
+  return { success: true, registration };
+}
+
+module.exports = {
+  validateRegistrationData,
+  checkDuplicateRegistration,
+  registerCourse,
+  getStudentRegistrations,
+  getTutorRegistrations,
+  cancelRegistration
+};

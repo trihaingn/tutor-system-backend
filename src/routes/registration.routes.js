@@ -68,6 +68,34 @@
 //   registrationController.cancelRegistration
 // )
 
-// TODO: Initialize router
-// TODO: Define routes with middleware chains
-// TODO: Export router
+const express = require('express');
+const router = express.Router();
+const registrationController = require('../controllers/registration.controller');
+const { authMiddleware } = require('../middleware/authMiddleware');
+const { roleMiddleware } = require('../middleware/roleMiddleware');
+
+// POST /api/v1/registrations - Register course
+router.post(
+  '/',
+  authMiddleware,
+  roleMiddleware(['STUDENT']),
+  registrationController.registerCourse
+);
+
+// GET /api/v1/registrations/me - Get my registrations
+router.get(
+  '/me',
+  authMiddleware,
+  roleMiddleware(['STUDENT']),
+  registrationController.getMyRegistrations
+);
+
+// DELETE /api/v1/registrations/:id - Cancel registration
+router.delete(
+  '/:id',
+  authMiddleware,
+  roleMiddleware(['STUDENT']),
+  registrationController.cancelRegistration
+);
+
+module.exports = router;

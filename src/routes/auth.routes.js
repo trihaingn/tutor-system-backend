@@ -84,14 +84,21 @@
 // 3. Query User with populated Student/Tutor
 // 4. Return user profile
 
-// TODO: Initialize router
-// const router = express.Router()
+const express = require('express');
+const router = express.Router();
+const authController = require('../controllers/auth.controller');
+const { authMiddleware } = require('../middleware/authMiddleware');
 
-// TODO: Define routes
-// router.get('/login', authController.login)
-// router.get('/callback', authController.handleCallback)
-// router.post('/logout', authMiddleware, authController.logout)
-// router.get('/me', authMiddleware, authController.getCurrentUser)
+// GET /api/v1/auth/login - Redirect to SSO
+router.get('/login', authController.login);
 
-// TODO: Export router
-// module.exports = router
+// GET /api/v1/auth/callback - Handle SSO callback
+router.get('/callback', authController.handleCallback);
+
+// POST /api/v1/auth/logout - Logout user
+router.post('/logout', authMiddleware, authController.logout);
+
+// GET /api/v1/auth/me - Get current user info
+router.get('/me', authMiddleware, authController.getCurrentUser);
+
+module.exports = router;

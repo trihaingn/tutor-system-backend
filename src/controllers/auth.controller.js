@@ -108,18 +108,98 @@
 //   }
 // }
 
-// TODO: Import dependencies (AuthService, DatacoreService)
+const AuthService = require('../services/auth/AuthService');
+const UserService = require('../services/user/UserService');
+const { asyncHandler } = require('../middleware/errorMiddleware');
+const { SSO_LOGIN_URL, SSO_SERVICE_URL } = require('../config/sso.config');
 
-// TODO: Implement login() - Redirect to SSO
+/**
+ * GET /api/v1/auth/login
+ * Redirect user to SSO HCMUT login page
+ */
+const login = asyncHandler(async (req, res) => {
+  const serviceUrl = SSO_SERVICE_URL || `${req.protocol}://${req.get('host')}/api/v1/auth/callback`;
+  const loginUrl = `${SSO_LOGIN_URL}?service=${encodeURIComponent(serviceUrl)}`;
+  
+  res.redirect(loginUrl);
+});
 
-// TODO: Implement handleCallback()
-// - Validate SSO ticket
-// - Sync DATACORE (BR-007)
-// - Generate JWT
-// - Set cookie
+/**
+ * GET /api/v1/auth/callback
+ * Handle callback from SSO HCMUT (UC-01, UC-04)
+ */
+const handleCallback = asyncHandler(async (req, res) => {
+  const { ticket } = req.query;
+  const service = SSO_SERVICE_URL || `${req.protocol}://${req.get('host')}/api/v1/auth/callback`;
 
-// TODO: Implement logout() - Clear cookie
+  if (!ticket) {
+    return res.status(400).json({
+      success: false,
+      message: 'Missing SSO ticket'
+    });
+  }
 
-// TODO: Implement getCurrentUser() - Return user profile
+  // Call AuthService to handle login flow
+  const result = await AuthService.login(ticket, service);
 
-// TODO: Export controller functions
+  // Set JWT in HTTP-only cookie
+  res.cookie('jwt', result.token, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    maxAge: 24 * 60 * 60 * 1000 // 1 day
+  });
+
+  // Return JSON response (or redirect to frontend)
+  res.status(200).json({
+    success: true,
+    data: result.user,
+    token: result.token,
+    message: 'Login successful'
+  });
+});
+
+/**
+ * POST /api/v1/auth/logout
+ * Logout user (UC-02)
+ */
+const logout = asyncHandler(async (req, res) => {
+  // Clear JWT cookie
+  res.clearCookie('jwt');
+
+  const result = await AuthService.logout();
+
+  res.status(200).json(result);
+});
+
+/**
+ * GET /api/v1/auth/me
+ * Get current logged-in user info (UC-03)
+ */
+const getCurrentUser = asyncHandler(async (req, res) => {
+  // userId is attached by authMiddleware
+  const userId = req.userId;
+
+  const user = await UserService.getUserById(userId);
+
+  res.status(200).json({
+    success: true,
+    data: {
+      userId: user._id,
+      email: user.email,
+      fullName: user.fullName,
+      role: user.role,
+      status: user.status,
+      mssv: user.mssv,
+      maCB: user.maCB,
+      student: user.student || null,
+      tutor: user.tutor || null
+    }
+  });
+});
+
+module.exports = {
+  login,
+  handleCallback,
+  logout,
+  getCurrentUser
+};
