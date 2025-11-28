@@ -1,5 +1,6 @@
 {
   "name": "tutor-backend",
+  "type": "module",
   "version": "1.0.0",
   "description": "Backend API for HCMUT Tutor System",
   "main": "src/server.js",
