@@ -9,9 +9,10 @@
  * - SSO_VERSION: CAS protocol version (2.0 or 3.0)
  */
 
-require('dotenv').config();
+import dotenv from 'dotenv';
+dotenv.config();
 
-module.exports = {
+export default {
   enabled: process.env.SSO_ENABLED === 'true',
   baseUrl: process.env.SSO_BASE_URL || 'http://localhost:5001',
   serviceUrl: process.env.SSO_SERVICE_URL || 'http://localhost:5000/api/v1/auth/callback',

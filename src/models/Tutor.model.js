@@ -57,7 +57,7 @@
  * - averageRating được update mỗi khi có StudentEvaluation mới (EvaluationService)
  */
 
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const TutorSchema = new mongoose.Schema(
   {
@@ -70,51 +70,15 @@ const TutorSchema = new mongoose.Schema(
       index: true
     },
     
-    // Identification
-    maCB: {
-      type: String,
-      required: true,
-      unique: true,
-      index: true
+    // Subjects
+    subject: {
+        type: [String],
+        validate: v => v.length > 0
     },
-    
-    // Tutor Type
-    type: {
-      type: String,
-      enum: ['LECTURER', 'RESEARCH_STUDENT', 'SENIOR_STUDENT'],
-      required: true,
-      index: true
+    maxStudents: {
+        type: Number,
+        default: 200,
     },
-    
-    // Expertise & Subjects
-    expertise: [
-      {
-        subjectId: { type: String, required: true },
-        subjectName: { type: String, required: true },
-        yearsOfExperience: { type: Number, default: 0 }
-      }
-    ],
-    bio: {
-      type: String,
-      maxlength: 1000,
-      default: ''
-    },
-    researchInterests: [String],
-    
-    // Availability Settings
-    maxStudentsPerSlot: {
-      type: Number,
-      default: 3,
-      min: 1,
-      max: 20
-    },
-    preferredSessionType: {
-      type: String,
-      enum: ['ONLINE', 'OFFLINE', 'BOTH'],
-      default: 'BOTH'
-    },
-    
-    // Statistics
     stats: {
       totalStudents: { type: Number, default: 0 },
       totalSessions: { type: Number, default: 0 },
@@ -122,12 +86,6 @@ const TutorSchema = new mongoose.Schema(
       cancelledSessions: { type: Number, default: 0 },
       averageRating: { type: Number, default: 0 },
       totalReviews: { type: Number, default: 0 }
-    },
-    
-    // Status
-    isAcceptingStudents: {
-      type: Boolean,
-      default: true
     }
   },
   {
@@ -138,8 +96,5 @@ const TutorSchema = new mongoose.Schema(
 
 // Indexes
 TutorSchema.index({ userId: 1 });
-TutorSchema.index({ maCB: 1 });
-TutorSchema.index({ type: 1, 'stats.averageRating': -1 });
-TutorSchema.index({ 'expertise.subjectId': 1 });
 
-module.exports = mongoose.model('Tutor', TutorSchema);
+export default mongoose.model('Tutor', TutorSchema);

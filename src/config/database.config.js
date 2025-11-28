@@ -97,7 +97,8 @@
 // IMPLEMENTATION
 // ============================================================
 
-require('dotenv').config();
+import dotenv from 'dotenv';
+dotenv.config();
 
 const databaseConfig = {
   // MongoDB Connection URI
@@ -131,4 +132,4 @@ if (process.env.NODE_ENV === 'development') {
   // Uncomment to enable: databaseConfig.options.debug = true;
 }
 
-module.exports = databaseConfig;
+export default databaseConfig;

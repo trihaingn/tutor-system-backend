@@ -141,10 +141,10 @@
 // OUTPUT:
 // - Return User object (populated)
 
-const User = require('../../models/User.model');
-const Student = require('../../models/Student.model');
-const Tutor = require('../../models/Tutor.model');
-const { NotFoundError } = require('../../middleware/errorMiddleware');
+import User from '../../models/User.model.js';
+import Student from '../../models/Student.model.js';
+import Tutor from '../../models/Tutor.model.js';
+import { NotFoundError } from '../../middleware/errorMiddleware.js';
 
 /**
  * Tạo hoặc update User record
@@ -243,7 +243,7 @@ async function getUserById(userId) {
   return user;
 }
 
-module.exports = {
+export {
   createOrUpdateUser,
   createOrUpdateStudent,
   createOrUpdateTutor,

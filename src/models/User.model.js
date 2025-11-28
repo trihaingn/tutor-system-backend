@@ -45,8 +45,8 @@
  * - { status: 1 }
  * 
  * VIRTUAL FIELDS (populate):
- * - student: Populate từ Student model (localField: _id, foreignField: userId)
- * - tutor: Populate từ Tutor model (localField: _id, foreignField: userId)
+ * - student: Populate từ Student model (localField: _id, foreignField: hcmutId)
+ * - tutor: Populate từ Tutor model (localField: _id, foreignField: hcmutId)
  * 
  * BUSINESS RULES:
  * - BR-007: Mỗi lần login, phải sync data từ DATACORE (AuthService)
@@ -55,25 +55,18 @@
  * - DATACORE là READ-ONLY source (hệ thống không sửa data trên DATACORE)
  */
 
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const UserSchema = new mongoose.Schema(
   {
     // Identity fields
-    mssv: {
+    hcmutId: { // MSSV OR MSCB
       type: String,
-      unique: true,
-      sparse: true,
+      require: true,
       index: true,
       trim: true
     },
-    maCB: {
-      type: String,
-      unique: true,
-      sparse: true,
-      index: true,
-      trim: true
-    },
+
     email: {
       type: String,
       required: [true, 'Email is required'],
@@ -90,14 +83,10 @@ const UserSchema = new mongoose.Schema(
     // Profile fields
     fullName: {
       type: String,
-      required: [true, 'Full name is required'],
-      trim: true,
-      minlength: [2, 'Full name must be at least 2 characters'],
-      maxlength: [100, 'Full name cannot exceed 100 characters']
+      required: true,
     },
     faculty: {
       type: String,
-      enum: ['CSE', 'EE', 'ME', 'CE', 'CHE', 'BME', 'APPLIED_SCIENCE', 'MANAGEMENT'],
       index: true
     },
     
@@ -105,12 +94,13 @@ const UserSchema = new mongoose.Schema(
     role: {
       type: String,
       enum: ['STUDENT', 'TUTOR', 'ADMIN'],
-      required: [true, 'Role is required'],
+      required: true,
       index: true
     },
+
     status: {
       type: String,
-      enum: ['ACTIVE', 'SUSPENDED', 'GRADUATED', 'RESIGNED'],
+      enum: ['ACTIVE', 'INACTIVE'],
       default: 'ACTIVE',
       index: true
     },
@@ -119,11 +109,6 @@ const UserSchema = new mongoose.Schema(
     lastSyncAt: {
       type: Date,
       default: null
-    },
-    syncSource: {
-      type: String,
-      enum: ['DATACORE', 'MANUAL'],
-      default: 'DATACORE'
     }
   },
   {
@@ -133,21 +118,21 @@ const UserSchema = new mongoose.Schema(
 );
 
 // Composite indexes
-UserSchema.index({ email: 1, role: 1 });
-UserSchema.index({ status: 1, role: 1 });
+UserSchema.index({ email: 1, role: 1 }, { unique: true});
+UserSchema.index({ hcmutId: 1, role: 1 }, { unique: true})
 
 // Virtual fields
 UserSchema.virtual('student', {
   ref: 'Student',
   localField: '_id',
-  foreignField: 'userId',
+  foreignField: 'hcmutId',
   justOne: true
 });
 
 UserSchema.virtual('tutor', {
   ref: 'Tutor',
   localField: '_id',
-  foreignField: 'userId',
+  foreignField: 'hcmutId',
   justOne: true
 });
 
@@ -165,7 +150,7 @@ UserSchema.methods.isActive = function() {
 };
 
 UserSchema.methods.getIdentifier = function() {
-  return this.isStudent() ? this.mssv : this.maCB;
+  return this.hcmutId;
 };
 
 // Static methods
@@ -173,26 +158,12 @@ UserSchema.statics.findByEmail = function(email) {
   return this.findOne({ email: email.toLowerCase() });
 };
 
-UserSchema.statics.findByMSSV = function(mssv) {
-  return this.findOne({ mssv, role: 'STUDENT' });
-};
-
-UserSchema.statics.findByMaCB = function(maCB) {
-  return this.findOne({ maCB, role: { $in: ['TUTOR', 'ADMIN'] } });
-};
-
-// Pre-save validation
-UserSchema.pre('save', async function() {
-  if (this.role === 'STUDENT' && !this.mssv) {
-    throw new Error('MSSV is required for students');
-  }
-  if ((this.role === 'TUTOR' || this.role === 'ADMIN') && !this.maCB) {
-    throw new Error('Mã CB is required for tutors and admins');
-  }
-});
+UserSchema.statics.findByUserIdAndRole = function(hcmutId, role) {
+    return this.findOne({hcmutId: hcmutId, role: role})
+}
 
 // Enable virtuals in JSON
 UserSchema.set('toJSON', { virtuals: true });
 UserSchema.set('toObject', { virtuals: true });
 
-module.exports = mongoose.model('User', UserSchema);
+export default mongoose.model('User', UserSchema);

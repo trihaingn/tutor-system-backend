@@ -15,9 +15,9 @@
  * - Always validate tickets server-to-server
  */
 
-const axios = require('axios');
-const logger = require('../../utils/logger');
-const casConfig = require('../../config/cas.config');
+import axios from 'axios';
+import logger from '../../utils/logger.js';
+import casConfig from '../../config/cas.config.js';
 
 class CASService {
   /**
@@ -169,4 +169,4 @@ class CASService {
   }
 }
 
-module.exports = new CASService();
+export default new CASService();

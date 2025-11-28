@@ -1,5 +1,5 @@
-const axios = require('axios');
-const datacoreConfig = require('../../config/datacore.config');
+import axios from 'axios';
+import datacoreConfig from '../../config/datacore.config.js';
 
 /**
  * DatacoreService - Integration with HCMUT DATACORE
@@ -199,4 +199,4 @@ class DatacoreService {
   }
 }
 
-module.exports = DatacoreService;
+export default DatacoreService;

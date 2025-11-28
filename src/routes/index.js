@@ -96,14 +96,14 @@
 //   })
 // })
 
-const express = require('express');
+import express from 'express';
 const router = express.Router();
 
 // Import all sub-routes
-const authRoutes = require('./auth.routes');
-const registrationRoutes = require('./registration.routes');
-const studentRoutes = require('./student.routes');
-const tutorRoutes = require('./tutor.routes');
+import authRoutes from './auth.routes.js';
+import registrationRoutes from './registration.routes.js';
+import studentRoutes from './student.routes.js';
+import tutorRoutes from './tutor.routes.js';
 
 // Mount sub-routes
 router.use('/auth', authRoutes);
@@ -130,4 +130,4 @@ router.use((req, res) => {
   });
 });
 
-module.exports = router;
+export default router;

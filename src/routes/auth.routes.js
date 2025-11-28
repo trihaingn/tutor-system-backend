@@ -84,10 +84,10 @@
 // 3. Query User with populated Student/Tutor
 // 4. Return user profile
 
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const authController = require('../controllers/auth.controller');
-const { authMiddleware } = require('../middleware/authMiddleware');
+import authController from '../controllers/auth.controller.js';
+import { authMiddleware } from '../middleware/authMiddleware.js';
 
 // ============================================================
 // LEGACY SSO ROUTES (if still needed)

@@ -97,10 +97,10 @@
 //   tutorController.getMyEvaluations
 // )
 
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const tutorController = require('../controllers/tutor.controller');
-const { authMiddleware } = require('../middleware/authMiddleware');
+import tutorController from '../controllers/tutor.controller.js';
+import { authMiddleware } from '../middleware/authMiddleware.js';
 
 // GET /api/v1/tutors/search - Search tutors
 router.get(
@@ -116,4 +116,4 @@ router.get(
   tutorController.getTutorDetails
 );
 
-module.exports = router;
+export default router;

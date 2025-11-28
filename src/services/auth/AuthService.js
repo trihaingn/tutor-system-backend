@@ -170,11 +170,11 @@
 //   token: "JWT string"
 // }
 
-const jwt = require('jsonwebtoken');
-const SSOService = require('../integration/SSOService');
-const DatacoreService = require('../integration/DatacoreService');
-const UserService = require('../user/UserService');
-const { AuthenticationError, InternalServerError } = require('../../middleware/errorMiddleware');
+import jwt from 'jsonwebtoken';
+import SSOService from '../integration/SSOService.js';
+import DatacoreService from '../integration/DatacoreService.js';
+import UserService from '../user/UserService.js';
+import { AuthenticationError, InternalServerError } from '../../middleware/errorMiddleware.js';
 
 /**
  * Validate SSO ticket từ HCMUT SSO portal
@@ -340,7 +340,7 @@ async function logout() {
   return { success: true, message: 'Logged out successfully' };
 }
 
-module.exports = {
+export {
   validateSSOTicket,
   syncAndCreateUser,
   generateJWT,

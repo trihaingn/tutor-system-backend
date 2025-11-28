@@ -68,11 +68,11 @@
 //   registrationController.cancelRegistration
 // )
 
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const registrationController = require('../controllers/registration.controller');
-const { authMiddleware } = require('../middleware/authMiddleware');
-const { roleMiddleware } = require('../middleware/roleMiddleware');
+import registrationController from '../controllers/registration.controller.js';
+import { authMiddleware } from '../middleware/authMiddleware.js';
+import { roleMiddleware } from '../middleware/roleMiddleware.js';
 
 // POST /api/v1/registrations - Register course
 router.post(
@@ -98,4 +98,4 @@ router.delete(
   registrationController.cancelRegistration
 );
 
-module.exports = router;
+export default router;

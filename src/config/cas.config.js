@@ -15,9 +15,10 @@
  * - CAS tickets are single-use only
  */
 
-require('dotenv').config();
+import dotenv from 'dotenv';
+dotenv.config();
 
-module.exports = {
+export default {
   // Enable/disable CAS authentication
   enabled: process.env.CAS_ENABLED === 'true',
 

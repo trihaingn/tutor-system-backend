@@ -113,9 +113,9 @@
 // OUTPUT:
 // - Return { success: true }
 
-const Student = require('../../models/Student.model');
-const { NotFoundError } = require('../../middleware/errorMiddleware');
-const StudentRepository = require('../../repositories/StudentRepository');
+import Student from '../../models/Student.model.js';
+import { NotFoundError } from '../../middleware/errorMiddleware.js';
+import StudentRepository from '../../repositories/StudentRepository.js';
 
 /**
  * Lấy full profile của Student (UC-06)
@@ -156,7 +156,7 @@ async function updateStudentStatistics(studentId, updates) {
   return { success: true };
 }
 
-module.exports = {
+export {
   getStudentProfile,
   updateStudentStatistics
 };

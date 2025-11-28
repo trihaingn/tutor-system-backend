@@ -49,7 +49,7 @@
  * - Statistics tự động cập nhật bởi Services (không manual update)
  */
 
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const StudentSchema = new mongoose.Schema(
   {
@@ -60,40 +60,6 @@ const StudentSchema = new mongoose.Schema(
       required: true,
       unique: true,
       index: true
-    },
-    
-    // Academic Information
-    mssv: {
-      type: String,
-      required: true,
-      unique: true,
-      index: true
-    },
-    major: {
-      type: String,
-      required: true
-    },
-    enrollmentYear: {
-      type: Number,
-      required: true
-    },
-    currentYear: {
-      type: Number,
-      min: 1,
-      max: 6,
-      default: 1
-    },
-    
-    // Academic Status
-    gpa: {
-      type: Number,
-      min: 0.0,
-      max: 4.0,
-      default: null
-    },
-    totalCredits: {
-      type: Number,
-      default: 0
     },
     
     // Tutor Program Participation
@@ -127,4 +93,4 @@ StudentSchema.index({ userId: 1 });
 StudentSchema.index({ mssv: 1 });
 StudentSchema.index({ major: 1, enrollmentYear: 1 });
 
-module.exports = mongoose.model('Student', StudentSchema);
+export default mongoose.model('Student', StudentSchema);

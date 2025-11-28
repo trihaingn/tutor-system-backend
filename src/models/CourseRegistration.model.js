@@ -50,7 +50,7 @@
  * - Ngăn chặn: Duplicate registration (same Student+Tutor+Subject)
  */
 
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 const CourseRegistrationSchema = new mongoose.Schema(
   {
@@ -120,4 +120,4 @@ CourseRegistrationSchema.index({ studentId: 1, status: 1 });
 CourseRegistrationSchema.index({ tutorId: 1, status: 1 });
 CourseRegistrationSchema.index({ subjectId: 1, status: 1 });
 
-module.exports = mongoose.model('CourseRegistration', CourseRegistrationSchema);
+export default mongoose.model('CourseRegistration', CourseRegistrationSchema);

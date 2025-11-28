@@ -93,3 +93,36 @@
 // AvailabilitySchema.index({ tutorId: 1, specificDate: 1, isActive: 1 });
 
 // TODO: Export model
+import mongoose from 'mongoose'
+import { collection } from './User.model'
+
+const AvailabilitySchema = mongoose.Schema({
+    tutorId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Tutor',
+        required: true,
+        index: true
+    },
+    dayOfWeek: {
+        type: Number,
+        min: 0 ,// Sunday
+        max: 6 ,// Saturday
+    },
+    startTime:    {
+        type: String,
+        match: /^([01]\d|2[0-3]):[0-5]\d$/
+    },
+    endTime:    {
+        type: String,
+        match: /^([01]\d|2[0-3]):[0-5]\d$/
+    },
+    isActive:   {
+        type: Boolean,
+        default: true,
+    }
+}, {
+    timestamps: true,
+    collection: 'availabilities'
+})
+
+export default mongoose.model('Availability', AvailabilitySchema)

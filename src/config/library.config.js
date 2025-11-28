@@ -10,9 +10,10 @@
  * NOTE: Feature này là OPTIONAL/FUTURE - chưa implement trong version 1.0
  */
 
-require('dotenv').config();
+import dotenv from 'dotenv';
+dotenv.config();
 
-module.exports = {
+export default {
   apiUrl: process.env.LIBRARY_API_URL || 'http://localhost:3002/api',
   timeout: parseInt(process.env.LIBRARY_TIMEOUT) || 5000,
   

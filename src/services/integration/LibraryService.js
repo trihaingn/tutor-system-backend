@@ -49,8 +49,8 @@
 // OUTPUT:
 // - Return book details
 
-const axios = require('axios');
-const libraryConfig = require('../../config/library.config');
+import axios from 'axios';
+import libraryConfig from '../../config/library.config.js';
 
 /**
  * LibraryService - Integration with HCMUT LIBRARY
@@ -148,4 +148,4 @@ class LibraryService {
   }
 }
 
-module.exports = LibraryService;
+export default LibraryService;

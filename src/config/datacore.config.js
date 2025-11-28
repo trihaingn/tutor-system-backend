@@ -9,9 +9,10 @@
  * - DATACORE_TIMEOUT: Request timeout (ms)
  */
 
-require('dotenv').config();
+import dotenv from 'dotenv';
+dotenv.config();
 
-module.exports = {
+export default {
   apiUrl: process.env.DATACORE_API_URL || 'http://localhost:8001/api',
   timeout: parseInt(process.env.DATACORE_TIMEOUT) || 5000,
   retryAttempts: parseInt(process.env.DATACORE_RETRY_ATTEMPTS) || 3,

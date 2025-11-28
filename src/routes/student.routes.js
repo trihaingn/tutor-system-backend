@@ -59,11 +59,11 @@
 //   studentController.getMyEvaluations
 // )
 
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const studentController = require('../controllers/student.controller');
-const { authMiddleware } = require('../middleware/authMiddleware');
-const { roleMiddleware } = require('../middleware/roleMiddleware');
+import studentController from '../controllers/student.controller.js';
+import { authMiddleware } from '../middleware/authMiddleware.js';
+import { roleMiddleware } from '../middleware/roleMiddleware.js';
 
 // GET /api/v1/students/me - Get my profile
 router.get(
@@ -73,4 +73,4 @@ router.get(
   studentController.getMyProfile
 );
 
-module.exports = router;
+export default router;

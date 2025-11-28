@@ -83,9 +83,9 @@
 // PSEUDOCODE:
 // - return `${SSO_BASE_URL}/logout`
 
-const axios = require('axios');
-const ssoConfig = require('../../config/sso.config');
-const { AuthenticationError, InternalServerError } = require('../../middleware/errorMiddleware');
+import axios from 'axios';
+import ssoConfig from '../../config/sso.config.js';
+import { AuthenticationError, InternalServerError } from '../../middleware/errorMiddleware.js';
 
 /**
  * SSOService - CAS SSO Integration
@@ -240,4 +240,4 @@ class SSOService {
   }
 }
 
-module.exports = SSOService;
+export default SSOService;

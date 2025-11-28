@@ -254,10 +254,10 @@
 // OUTPUT:
 // - Return { success: true, registration }
 
-const CourseRegistration = require('../../models/CourseRegistration.model');
-const Student = require('../../models/Student.model');
-const Tutor = require('../../models/Tutor.model');
-const CourseRegistrationRepository = require('../../repositories/CourseRegistrationRepository');
+import CourseRegistration from '../../models/CourseRegistration.model.js';
+import Student from '../../models/Student.model.js';
+import Tutor from '../../models/Tutor.model.js';
+import CourseRegistrationRepository from '../../repositories/CourseRegistrationRepository.js';
 const { 
   ValidationError, 
   ConflictError, 
@@ -458,7 +458,7 @@ async function cancelRegistration(registrationId, studentId) {
   return { success: true, registration };
 }
 
-module.exports = {
+export {
   validateRegistrationData,
   checkDuplicateRegistration,
   registerCourse,

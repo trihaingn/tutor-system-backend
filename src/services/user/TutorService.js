@@ -153,9 +153,9 @@
 // OUTPUT:
 // - Return { averageRating, totalReviews }
 
-const Tutor = require('../../models/Tutor.model');
-const { NotFoundError, ValidationError } = require('../../middleware/errorMiddleware');
-const TutorRepository = require('../../repositories/TutorRepository');
+import Tutor from '../../models/Tutor.model.js';
+import { NotFoundError, ValidationError } from '../../middleware/errorMiddleware.js';
+import TutorRepository from '../../repositories/TutorRepository.js';
 
 /**
  * Student search Tutors theo subject (UC-07)
@@ -241,7 +241,7 @@ async function updateTutorRating(tutorId, newRating, totalReviews) {
   return { success: true };
 }
 
-module.exports = {
+export {
   searchTutors,
   getTutorDetails,
   updateTutorRating
