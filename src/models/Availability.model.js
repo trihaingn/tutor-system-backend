@@ -77,26 +77,9 @@
  *    }
  */
 
-// TODO: Import mongoose
+import mongoose from 'mongoose';
 
-// TODO: Định nghĩa AvailabilitySchema với các trường trên
-
-// TODO: ⚠️ Thêm custom validation:
-// - If type=RECURRING => dayOfWeek required, specificDate must be null
-// - If type=SPECIFIC_DATE => specificDate required, dayOfWeek must be null
-// - startTime/endTime phải là giờ tròn (HH:00)
-// - endTime > startTime
-
-// TODO: Thêm indexes
-// AvailabilitySchema.index({ tutorId: 1, type: 1 });
-// AvailabilitySchema.index({ tutorId: 1, dayOfWeek: 1, isActive: 1 });
-// AvailabilitySchema.index({ tutorId: 1, specificDate: 1, isActive: 1 });
-
-// TODO: Export model
-import mongoose from 'mongoose'
-import { collection } from './User.model'
-
-const AvailabilitySchema = mongoose.Schema({
+const AvailabilitySchema = new mongoose.Schema({
     tutorId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Tutor',
@@ -110,19 +93,31 @@ const AvailabilitySchema = mongoose.Schema({
     },
     startTime:    {
         type: String,
-        match: /^([01]\d|2[0-3]):[0-5]\d$/
+        match: /^([01]\d|2[0-3]):00$/
     },
-    endTime:    {
+    endTime: {
         type: String,
-        match: /^([01]\d|2[0-3]):[0-5]\d$/
+        required: true,
+        match: /^([01]\d|2[0-3]):00$/,
+        validate: {
+            validator: function(value) {
+                return value > this.startTime;
+            },
+            message: 'endTime must be greater than startTime'
+        }
     },
-    isActive:   {
+    isActive: {
         type: Boolean,
-        default: true,
+        default: true
     }
 }, {
     timestamps: true,
     collection: 'availabilities'
-})
+});
 
-export default mongoose.model('Availability', AvailabilitySchema)
+// Indexes for query optimization
+AvailabilitySchema.index({ tutorId: 1, type: 1 });
+AvailabilitySchema.index({ tutorId: 1, dayOfWeek: 1, isActive: 1 });
+AvailabilitySchema.index({ tutorId: 1, specificDate: 1, isActive: 1 });
+
+export default mongoose.model('Availability', AvailabilitySchema);

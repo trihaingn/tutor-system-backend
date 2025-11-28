@@ -8,7 +8,7 @@
  * - N-1 với User (1-1 unique thực tế)
  * - 1-N với CourseRegistration (1 student có nhiều registrations)
  * - 1-N với Appointment (1 student có nhiều appointments)
- * - 1-N với StudentEvaluation (1 student đánh giá nhiều tutors)
+ * - 1-N với StudentFeedback (1 student đánh giá nhiều tutors)
  * 
  * CÁC TRƯỜNG (FIELDS):
  * 

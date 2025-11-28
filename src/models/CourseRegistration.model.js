@@ -85,22 +85,6 @@ const CourseRegistrationSchema = new mongoose.Schema(
       default: Date.now,
       index: true
     },
-    
-    // Version 2.0: Auto-approval (BR-005)
-    approvedAt: {
-      type: Date,
-      default: Date.now
-    },
-    approvedBy: {
-      type: String,
-      default: 'SYSTEM'
-    },
-    
-    // Optional notes
-    notes: {
-      type: String,
-      maxlength: 500
-    }
   },
   {
     timestamps: true,

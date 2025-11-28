@@ -7,9 +7,9 @@
  * QUAN HỆ:
  * - N-1 với User (1-1 unique thực tế)
  * - 1-N với CourseRegistration (1 tutor có nhiều registrations)
- * - 1-N với ConsultationSession (1 tutor host nhiều sessions)
+ * - 1-N với TutorSession (1 tutor host nhiều sessions)
  * - 1-N với Availability (1 tutor có nhiều availability slots)
- * - 1-N với TutorEvaluation (1 tutor đánh giá nhiều students)
+ * - 1-N với TutorFeedback (1 tutor đánh giá nhiều students)
  * 
  * CÁC TRƯỜNG (FIELDS):
  * 
@@ -40,7 +40,7 @@
  *    - stats.totalSessions (Number): Tổng số sessions đã tạo
  *    - stats.completedSessions (Number): Số sessions đã hoàn thành
  *    - stats.cancelledSessions (Number): Số sessions đã hủy
- *    - stats.averageRating (Number): Điểm đánh giá trung bình (từ StudentEvaluation)
+ *    - stats.averageRating (Number): Điểm đánh giá trung bình (từ StudentFeedback)
  *    - stats.totalReviews (Number): Tổng số đánh giá nhận được
  * 
  * 7. STATUS:
@@ -54,7 +54,7 @@
  * 
  * BUSINESS RULES:
  * - 1-1 relationship với User (userId unique)
- * - averageRating được update mỗi khi có StudentEvaluation mới (EvaluationService)
+ * - averageRating được update mỗi khi có StudentFeedback mới (FeedbackService)
  */
 
 import mongoose from 'mongoose';
