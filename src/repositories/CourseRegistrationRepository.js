@@ -6,67 +6,68 @@ class CourseRegistrationRepository extends BaseRepository {
     super(CourseRegistration);
   }
 
-  /**
-   * Check if duplicate registration exists
-   * BR-006: Prevent duplicate (studentId + tutorId + subjectId)
-   */
-  async checkDuplicate(studentId, tutorId, subjectId) {
-    return await this.model.findOne({
-      studentId,
-      tutorId,
-      subjectId,
-      status: { $in: ['ACTIVE', 'PENDING'] }
-    });
-  }
-
-  /**
-   * Get all registrations by student
-   */
   async findByStudent(studentId, options = {}) {
-    const filter = { studentId };
-    if (options.status) {
-      filter.status = options.status;
-    }
-
-    return await this.model
-      .find(filter)
-      .populate('tutorId')
-      .sort({ registeredAt: -1 });
+    return await this.findAll({ studentId }, options);
   }
 
-  /**
-   * Get all registrations by tutor
-   */
   async findByTutor(tutorId, options = {}) {
-    const filter = { tutorId };
-    if (options.status) {
-      filter.status = options.status;
-    }
-
-    return await this.model
-      .find(filter)
-      .populate('studentId')
-      .sort({ registeredAt: -1 });
+    return await this.findAll({ tutorId }, options);
   }
 
-  /**
-   * Get all registrations for a subject
-   */
-  async findBySubject(subjectId) {
-    return await this.model
-      .find({ subjectId, status: 'ACTIVE' })
-      .populate('studentId')
-      .populate('tutorId');
+  async findBySubject(subjectId, options = {}) {
+    return await this.findAll({ subjectId }, options);
   }
 
-  /**
-   * Count active registrations for a tutor
-   */
-  async countActiveByTutor(tutorId) {
-    return await this.model.countDocuments({
-      tutorId,
-      status: 'ACTIVE'
-    });
+  async findByStudentAndTutor(studentId, tutorId, options = {}) {
+    return await this.findAll({ studentId, tutorId }, options);
+  }
+
+  async findByStudentAndSubject(studentId, subjectId, options = {}) {
+    return await this.findAll({ studentId, subjectId }, options);
+  }
+
+  async findByTutorAndSubject(tutorId, subjectId, options = {}) {
+    return await this.findAll({ tutorId, subjectId }, options);
+  }
+
+  async findByStudentTutorSubject(studentId, tutorId, subjectId) {
+    return await this.findOne({ studentId, tutorId, subjectId });
+  }
+
+  async findActiveRegistrations(criteria = {}, options = {}) {
+    return await this.findAll({ ...criteria, status: 'ACTIVE' }, options);
+  }
+
+  async findByStatus(status, options = {}) {
+    return await this.findAll({ status }, options);
+  }
+
+  async cancelRegistration(registrationId) {
+    return await this.update(registrationId, { status: 'CANCELLED' });
+  }
+
+  async activateRegistration(registrationId) {
+    return await this.update(registrationId, { status: 'ACTIVE' });
+  }
+
+  async deactivateRegistration(registrationId) {
+    return await this.update(registrationId, { status: 'INACTIVE' });
+  }
+
+  async registrationExists(studentId, tutorId, subjectId) {
+    return await this.exists({ studentId, tutorId, subjectId });
+  }
+
+  async countByStudent(studentId, status = null) {
+    const criteria = { studentId };
+    if (status) criteria.status = status;
+    return await this.count(criteria);
+  }
+
+  async countByTutor(tutorId, status = null) {
+    const criteria = { tutorId };
+    if (status) criteria.status = status;
+    return await this.count(criteria);
   }
 }
 

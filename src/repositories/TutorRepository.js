@@ -1,308 +1,3 @@
-/**
- * REPOSITORY: Tutor Repository
- * FILE: TutorRepository.js
- * MỤC ĐÍCH: Truy vấn database cho Tutor model
- * 
- * EXTENDS: BaseRepository
- * MODEL: Tutor
- */
-
-// TODO: Import BaseRepository, Tutor model
-// const BaseRepository = require('./BaseRepository')
-// const Tutor = require('../models/Tutor')
-
-// ============================================================
-// CLASS: TutorRepository extends BaseRepository
-// ============================================================
-// CONSTRUCTOR:
-// constructor() {
-//   super(Tutor)
-// }
-
-// ============================================================
-// METHOD: findByUserId(userId)
-// ============================================================
-// PURPOSE: Tìm Tutor record theo userId
-// 
-// INPUT:
-// - userId: ObjectId
-// 
-// PSEUDOCODE:
-// Step 1: Query by userId
-//   const tutor = await this.model.findOne({ userId: userId })
-//     .populate('userId')
-// 
-// Step 2: Return tutor
-//   return tutor
-// 
-// OUTPUT:
-// - Tutor document hoặc null
-
-// ============================================================
-// METHOD: findByMaCB(maCB)
-// ============================================================
-// PURPOSE: Tìm Tutor theo mã cán bộ
-// 
-// INPUT:
-// - maCB: String
-// 
-// PSEUDOCODE:
-// Step 1: Query by maCB
-//   const tutor = await this.model.findOne({ maCB: maCB })
-//     .populate('userId')
-// 
-// Step 2: Return tutor
-//   return tutor
-// 
-// OUTPUT:
-// - Tutor document hoặc null
-
-// ============================================================
-// METHOD: searchTutors(criteria, options)
-// ============================================================
-// PURPOSE: Tìm kiếm tutors với nhiều tiêu chí (UC-07)
-// 
-// INPUT:
-// - criteria: { subjectId?, type?, minRating?, isAcceptingStudents? }
-// - options: { page, limit, sort }
-// 
-// PSEUDOCODE:
-// Step 1: Build filter
-//   const filter = {}
-//   
-//   // Filter by subject
-//   if (criteria.subjectId) {
-//     filter['expertise.subjectId'] = criteria.subjectId
-//   }
-//   
-//   // Filter by type
-//   if (criteria.type) {
-//     filter.type = criteria.type
-//   }
-//   
-//   // Filter by rating
-//   if (criteria.minRating) {
-//     filter.averageRating = { $gte: criteria.minRating }
-//   }
-//   
-//   // Filter by accepting students
-//   if (criteria.isAcceptingStudents !== undefined) {
-//     filter.isAcceptingStudents = criteria.isAcceptingStudents
-//   }
-// 
-// Step 2: Calculate pagination
-//   const page = options.page || 1
-//   const limit = options.limit || 10
-//   const skip = (page - 1) * limit
-// 
-// Step 3: Query tutors
-//   const tutors = await this.model.find(filter)
-//     .populate('userId', 'email fullName')
-//     .sort(options.sort || { averageRating: -1, totalReviews: -1 })
-//     .skip(skip)
-//     .limit(limit)
-// 
-// Step 4: Count total
-//   const total = await this.model.countDocuments(filter)
-// 
-// Step 5: Return paginated result
-//   return {
-//     data: tutors,
-//     pagination: {
-//       page,
-//       limit,
-//       total,
-//       totalPages: Math.ceil(total / limit)
-//     }
-//   }
-// 
-// OUTPUT:
-// - { data: [tutors], pagination: {...} }
-
-// ============================================================
-// METHOD: updateStatistics(tutorId, updates)
-// ============================================================
-// PURPOSE: Cập nhật statistics của tutor
-// 
-// INPUT:
-// - tutorId: ObjectId
-// - updates: Object {
-//     totalStudents?,
-//     totalSessions?,
-//     completedSessions?,
-//     cancelledSessions?,
-//     averageRating?,
-//     totalReviews?
-//   }
-// 
-// PSEUDOCODE:
-// Step 1: Build update query
-//   const updateData = {}
-//   
-//   Object.keys(updates).forEach(key => {
-//     if (updates[key] !== undefined) {
-//       updateData[`statistics.${key}`] = updates[key]
-//     }
-//   })
-// 
-// Step 2: Update tutor
-//   const tutor = await this.model.findByIdAndUpdate(
-//     tutorId,
-//     { $set: updateData },
-//     { new: true }
-//   )
-// 
-// Step 3: Return updated tutor
-//   return tutor
-// 
-// OUTPUT:
-// - Updated Tutor document
-
-// ============================================================
-// METHOD: incrementStatistic(tutorId, field)
-// ============================================================
-// PURPOSE: Increment một field trong statistics
-// 
-// INPUT:
-// - tutorId: ObjectId
-// - field: String (e.g., 'totalStudents', 'totalSessions')
-// 
-// PSEUDOCODE:
-// Step 1: Increment field
-//   const tutor = await this.model.findByIdAndUpdate(
-//     tutorId,
-//     { $inc: { [`statistics.${field}`]: 1 } },
-//     { new: true }
-//   )
-// 
-// Step 2: Return updated tutor
-//   return tutor
-// 
-// OUTPUT:
-// - Updated Tutor document
-
-// ============================================================
-// METHOD: updateRating(tutorId, newRating)
-// ============================================================
-// PURPOSE: Cập nhật averageRating sau khi có evaluation mới
-// 
-// INPUT:
-// - tutorId: ObjectId
-// - newRating: Number (1-5)
-// 
-// PSEUDOCODE:
-// Step 1: Get current tutor
-//   const tutor = await this.model.findById(tutorId)
-//   if (!tutor) throw new Error('Tutor not found')
-// 
-// Step 2: Calculate new average
-//   const currentTotal = tutor.statistics.averageRating * tutor.statistics.totalReviews
-//   const newTotalReviews = tutor.statistics.totalReviews + 1
-//   const newAverage = (currentTotal + newRating) / newTotalReviews
-// 
-// Step 3: Update tutor
-//   const updatedTutor = await this.model.findByIdAndUpdate(
-//     tutorId,
-//     {
-//       $set: {
-//         'statistics.averageRating': newAverage,
-//         'statistics.totalReviews': newTotalReviews
-//       }
-//     },
-//     { new: true }
-//   )
-// 
-// Step 4: Return updated tutor
-//   return updatedTutor
-// 
-// OUTPUT:
-// - Updated Tutor document với rating mới
-
-// ============================================================
-// METHOD: getTutorSessions(tutorId, filters, options)
-// ============================================================
-// PURPOSE: Lấy danh sách sessions của tutor (UC-21)
-// 
-// INPUT:
-// - tutorId: ObjectId
-// - filters: { status?, startDate?, endDate? }
-// - options: { page, limit, sort }
-// 
-// PSEUDOCODE:
-// Step 1: Build filter
-//   const ConsultationSession = require('../models/ConsultationSession')
-//   const filter = { tutorId: tutorId }
-//   
-//   if (filters.status) {
-//     filter.status = filters.status
-//   }
-//   
-//   if (filters.startDate || filters.endDate) {
-//     filter.startTime = {}
-//     if (filters.startDate) {
-//       filter.startTime.$gte = new Date(filters.startDate)
-//     }
-//     if (filters.endDate) {
-//       filter.startTime.$lte = new Date(filters.endDate)
-//     }
-//   }
-// 
-// Step 2: Calculate pagination
-//   const page = options.page || 1
-//   const limit = options.limit || 10
-//   const skip = (page - 1) * limit
-// 
-// Step 3: Query sessions
-//   const sessions = await ConsultationSession.find(filter)
-//     .sort(options.sort || { startTime: -1 })
-//     .skip(skip)
-//     .limit(limit)
-// 
-// Step 4: Count total
-//   const total = await ConsultationSession.countDocuments(filter)
-// 
-// Step 5: Return result
-//   return {
-//     data: sessions,
-//     pagination: {
-//       page,
-//       limit,
-//       total,
-//       totalPages: Math.ceil(total / limit)
-//     }
-//   }
-// 
-// OUTPUT:
-// - { data: [sessions], pagination: {...} }
-
-// ============================================================
-// METHOD: getTopRatedTutors(limit = 10)
-// ============================================================
-// PURPOSE: Lấy danh sách top tutors theo rating
-// USE CASE: Homepage, ReportService
-// 
-// INPUT:
-// - limit: Number (default 10)
-// 
-// PSEUDOCODE:
-// Step 1: Query top tutors
-//   const tutors = await this.model.find({
-//     isAcceptingStudents: true,
-//     'statistics.averageRating': { $gte: 4.5 }
-//   })
-//     .populate('userId', 'fullName email')
-//     .sort({
-//       'statistics.averageRating': -1,
-//       'statistics.totalReviews': -1
-//     })
-//     .limit(limit)
-// 
-// Step 2: Return tutors
-//   return tutors
-// 
-// OUTPUT:
-// - Array of top-rated Tutors
-
 import BaseRepository from './BaseRepository.js';
 import Tutor from '../models/Tutor.model.js';
 
@@ -312,108 +7,84 @@ class TutorRepository extends BaseRepository {
   }
 
   async findByUserId(userId) {
-    return await this.model.findOne({ userId }).populate('userId');
+    return await this.findOne({ userId });
   }
 
-  async findByMaCB(maCB) {
-    return await this.model.findOne({ maCB }).populate('userId');
+  async findBySubject(subject, options = {}) {
+    return await this.findAll({ subject: { $in: [subject] } }, options);
   }
 
-  async searchTutors(criteria, options = {}) {
-    const filter = {};
-
-    if (criteria.subjectId) {
-      filter['expertise.subjectId'] = criteria.subjectId;
-    }
-    if (criteria.type) {
-      filter.type = criteria.type;
-    }
-    if (criteria.minRating) {
-      filter['stats.averageRating'] = { $gte: criteria.minRating };
-    }
-    if (criteria.isAcceptingStudents !== undefined) {
-      filter.isAcceptingStudents = criteria.isAcceptingStudents;
-    }
-
-    const page = options.page || 1;
-    const limit = options.limit || 10;
-    const skip = (page - 1) * limit;
-
-    const tutors = await this.model
-      .find(filter)
-      .populate('userId', 'email fullName faculty')
-      .sort(options.sort || { 'stats.averageRating': -1, 'stats.totalReviews': -1 })
-      .skip(skip)
-      .limit(limit);
-
-    const total = await this.model.countDocuments(filter);
-
-    return {
-      data: tutors,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit)
-      }
-    };
+  async findBySubjects(subjects, options = {}) {
+    return await this.findAll({ subject: { $in: subjects } }, options);
   }
 
-  async updateStatistics(tutorId, updates) {
-    const updateData = {};
-    Object.keys(updates).forEach(key => {
-      if (updates[key] !== undefined) {
-        updateData[`stats.${key}`] = updates[key];
-      }
-    });
-
-    return await this.model.findByIdAndUpdate(
-      tutorId,
-      { $set: updateData },
-      { new: true }
-    );
+  async updateStats(tutorId, statsUpdate) {
+    return await this.update(tutorId, { stats: statsUpdate });
   }
 
-  async incrementStatistic(tutorId, field) {
-    return await this.model.findByIdAndUpdate(
-      tutorId,
-      { $inc: { [`stats.${field}`]: 1 } },
-      { new: true }
-    );
+  async incrementStat(tutorId, statField, value = 1) {
+    const tutor = await this.findById(tutorId);
+    if (!tutor) return null;
+
+    tutor.stats[statField] = (tutor.stats[statField] || 0) + value;
+    return await tutor.save();
   }
 
-  async updateRating(tutorId, newRating) {
-    const tutor = await this.model.findById(tutorId);
-    if (!tutor) throw new Error('Tutor not found');
+  async incrementTotalStudents(tutorId) {
+    return await this.incrementStat(tutorId, 'totalStudents');
+  }
 
-    const currentTotal = tutor.stats.averageRating * tutor.stats.totalReviews;
-    const newTotalReviews = tutor.stats.totalReviews + 1;
-    const newAverage = (currentTotal + newRating) / newTotalReviews;
+  async incrementTotalSessions(tutorId) {
+    return await this.incrementStat(tutorId, 'totalSessions');
+  }
 
-    return await this.model.findByIdAndUpdate(
-      tutorId,
+  async incrementCompletedSessions(tutorId) {
+    return await this.incrementStat(tutorId, 'completedSessions');
+  }
+
+  async incrementCancelledSessions(tutorId) {
+    return await this.incrementStat(tutorId, 'cancelledSessions');
+  }
+
+  async updateRatingAfterReview(tutorId, newRating) {
+    const tutor = await this.findById(tutorId);
+    if (!tutor) return null;
+
+    const currentAverage = tutor.stats.averageRating || 0;
+    const currentTotal = tutor.stats.totalReviews || 0;
+
+    const newTotal = currentTotal + 1;
+    const newAverage = ((currentAverage * currentTotal) + newRating) / newTotal;
+
+    tutor.stats.averageRating = newAverage;
+    tutor.stats.totalReviews = newTotal;
+
+    return await tutor.save();
+  }
+
+  async findTopRated(limit = 10, options = {}) {
+    return await this.findAll(
+      {},
       {
-        $set: {
-          'stats.averageRating': parseFloat(newAverage.toFixed(2)),
-          'stats.totalReviews': newTotalReviews
-        }
-      },
-      { new: true }
+        ...options,
+        sort: { 'stats.averageRating': -1 },
+        limit
+      }
     );
   }
 
-  async getTopRatedTutors(limit = 10) {
-    return await this.model
-      .find({
-        isAcceptingStudents: true,
-        'stats.averageRating': { $gte: 4.0 }
-      })
-      .populate('userId', 'fullName email faculty')
-      .sort({
-        'stats.averageRating': -1,
-        'stats.totalReviews': -1
-      })
-      .limit(limit);
+  async findByMinRating(minRating, options = {}) {
+    return await this.findAll(
+      { 'stats.averageRating': { $gte: minRating } },
+      options
+    );
+  }
+
+  async canAcceptMoreStudents(tutorId) {
+    const tutor = await this.findById(tutorId);
+    if (!tutor) return false;
+
+    return tutor.stats.totalStudents < tutor.maxStudents;
   }
 }
 
