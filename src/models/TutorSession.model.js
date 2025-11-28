@@ -1,8 +1,5 @@
 import mongoose from 'mongoose';
 
-// NOTE: TutorSession is identical to TutorSession (same structure)
-// This is an alias/duplicate model for backward compatibility
-
 const TutorSessionSchema = new mongoose.Schema({
     tutorId: {
         type: mongoose.Schema.Types.ObjectId,
