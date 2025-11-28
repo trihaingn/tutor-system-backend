@@ -84,14 +84,68 @@
 // 3. Query User with populated Student/Tutor
 // 4. Return user profile
 
-// TODO: Initialize router
-// const router = express.Router()
+const express = require('express');
+const router = express.Router();
+const authController = require('../controllers/auth.controller');
+const { authMiddleware } = require('../middleware/authMiddleware');
 
-// TODO: Define routes
-// router.get('/login', authController.login)
-// router.get('/callback', authController.handleCallback)
-// router.post('/logout', authMiddleware, authController.logout)
-// router.get('/me', authMiddleware, authController.getCurrentUser)
+// ============================================================
+// LEGACY SSO ROUTES (if still needed)
+// ============================================================
+// GET /api/v1/auth/login - Redirect to SSO
+router.get('/login', authController.login);
 
-// TODO: Export router
-// module.exports = router
+// GET /api/v1/auth/callback - Handle SSO callback
+router.get('/callback', authController.handleCallback);
+
+// ============================================================
+// CAS AUTHENTICATION ROUTES
+// ============================================================
+/**
+ * GET /api/v1/auth/cas/login
+ * Redirect user to CAS login page
+ * 
+ * ACCESS: Public
+ * FLOW:
+ * 1. User clicks "Login" → Frontend redirects to this endpoint
+ * 2. Backend generates CAS login URL with service callback
+ * 3. Backend redirects to CAS server
+ * 4. CAS shows login form to user
+ * 5. After successful login, CAS redirects to /auth/cas/callback with ticket
+ */
+router.get('/cas/login', authController.casLogin);
+
+/**
+ * GET /api/v1/auth/cas/callback
+ * Handle CAS callback and validate ticket
+ * 
+ * ACCESS: Public (called by CAS server)
+ * QUERY PARAMS: ticket (CAS service ticket ST-xxxxx)
+ * 
+ * FLOW:
+ * 1. Extract ticket from query params
+ * 2. Validate ticket with CAS server (server-to-server POST /auth/validate)
+ * 3. CAS returns user info if ticket is valid
+ * 4. Find or create user in local database
+ * 5. Generate JWT token
+ * 6. Set JWT in HTTP-only cookie
+ * 7. Redirect to frontend dashboard
+ * 
+ * SECURITY:
+ * - Ticket is single-use (CAS invalidates after validation)
+ * - Never trust client-provided user info
+ * - Only trust CAS validation results
+ * - Backend must call CAS /validate endpoint every time
+ */
+router.get('/cas/callback', authController.casCallback);
+
+// ============================================================
+// PROTECTED ROUTES
+// ============================================================
+// POST /api/v1/auth/logout - Logout user
+router.post('/logout', authMiddleware, authController.logout);
+
+// GET /api/v1/auth/me - Get current user info
+router.get('/me', authMiddleware, authController.getCurrentUser);
+
+module.exports = router;

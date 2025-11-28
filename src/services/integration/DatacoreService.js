@@ -1,132 +1,202 @@
+const axios = require('axios');
+const datacoreConfig = require('../../config/datacore.config');
+
 /**
- * SERVICE: DatacoreService
- * FILE: DatacoreService.js
- * MỤC ĐÍCH: Gọi API DATACORE để sync dữ liệu Student/Tutor (BR-007)
+ * DatacoreService - Integration with HCMUT DATACORE
  * 
- * BUSINESS RULES:
- * - BR-007: Mỗi lần login, phải sync data từ DATACORE
- * - DATACORE là READ-ONLY source of truth
- * 
- * DEPENDENCIES:
- * - axios (HTTP client)
- * - DatacoreConfig (API URL, credentials)
+ * Business Rules:
+ * - BR-007: Auto-sync DATACORE on every login
+ * - DATACORE is READ-ONLY source of truth
  */
 
-// ============================================================
-// FUNCTION: getStudentData(mssv)
-// ============================================================
-// PURPOSE: Lấy thông tin Student từ DATACORE API
-// 
-// INPUT:
-// - mssv: String (Student ID, e.g., "2210001")
-// 
-// PSEUDOCODE:
-// Step 1: Build API request
-//   - const url = `${DATACORE_API_URL}/students/${mssv}`
-//   - const headers = {
-//       'Authorization': `Bearer ${DATACORE_API_KEY}`,
-//       'Content-Type': 'application/json'
-//     }
-// 
-// Step 2: Call DATACORE API
-//   - try {
-//       const response = await axios.get(url, { headers })
-//       const data = response.data
-//     }
-//   - catch (error):
-//     → If error.response.status === 404:
-//       → Throw NotFoundError("Student không tồn tại trong DATACORE")
-//     → Else:
-//       → Throw InternalServerError("Không thể kết nối DATACORE")
-// 
-// Step 3: Transform data (map DATACORE fields → our schema)
-//   - return {
-//       mssv: data.student_id,
-//       fullName: data.full_name,
-//       faculty: data.faculty,
-//       major: data.major,
-//       enrollmentYear: data.enrollment_year,
-//       currentYear: data.current_year,
-//       gpa: data.gpa,
-//       totalCredits: data.total_credits,
-//       email: data.email
-//     }
-// 
-// OUTPUT:
-// - Return transformed Student data
+class DatacoreService {
+  /**
+   * Get user profile from DATACORE by ID (MSSV or Mã CB)
+   */
+  static async getUserInfo(userId) {
+    try {
+      const url = `${datacoreConfig.apiUrl}/users/profile/${userId}`;
+      const response = await axios.get(url, {
+        timeout: datacoreConfig.timeout || 5000
+      });
 
-// ============================================================
-// FUNCTION: getTutorData(maCB)
-// ============================================================
-// PURPOSE: Lấy thông tin Tutor (Lecturer/Staff) từ DATACORE API
-// 
-// INPUT:
-// - maCB: String (Staff ID, e.g., "CB001")
-// 
-// PSEUDOCODE:
-// Step 1: Build API request
-//   - const url = `${DATACORE_API_URL}/staff/${maCB}`
-//   - const headers = { 'Authorization': `Bearer ${DATACORE_API_KEY}` }
-// 
-// Step 2: Call DATACORE API
-//   - try {
-//       const response = await axios.get(url, { headers })
-//       const data = response.data
-//     }
-//   - catch (error): Handle errors (404, 500)
-// 
-// Step 3: Transform data
-//   - return {
-//       maCB: data.staff_id,
-//       fullName: data.full_name,
-//       faculty: data.faculty,
-//       email: data.email,
-//       type: determineType(data.position), // Map position → LECTURER/RESEARCH_STUDENT
-//       expertise: data.subjects?.map(subject => ({
-//         subjectId: subject.id,
-//         subjectName: subject.name,
-//         yearsOfExperience: subject.years_teaching || 0
-//       })) || []
-//     }
-// 
-// OUTPUT:
-// - Return transformed Tutor data
+      if (!response.data || !response.data.success) {
+        console.warn('[DATACORE] User not found:', userId);
+        return null;
+      }
 
-// ============================================================
-// FUNCTION: determineType(position)
-// ============================================================
-// PURPOSE: Map DATACORE position → Tutor type enum
-// 
-// PSEUDOCODE:
-// - If position includes 'Lecturer' OR 'Professor' → Return 'LECTURER'
-// - If position includes 'PhD Student' OR 'Researcher' → Return 'RESEARCH_STUDENT'
-// - Else → Return 'SENIOR_STUDENT' (default)
+      return response.data.data;
+    } catch (error) {
+      console.error('[DATACORE] Get user info error:', error.message);
+      if (error.response && error.response.status === 404) {
+        return null;
+      }
+      return null;
+    }
+  }
 
-// ============================================================
-// FUNCTION: validateDatacoreConnection()
-// ============================================================
-// PURPOSE: Health check DATACORE API (startup validation)
-// 
-// PSEUDOCODE:
-// Step 1: Ping DATACORE health endpoint
-//   - const url = `${DATACORE_API_URL}/health`
-//   - try {
-//       const response = await axios.get(url, { timeout: 5000 })
-//       return { connected: true, status: response.status }
-//     }
-//   - catch (error):
-//     → return { connected: false, error: error.message }
-// 
-// OUTPUT:
-// - Return { connected: Boolean, status?: Number, error?: String }
+  /**
+   * Get student data from DATACORE by MSSV
+   */
+  static async getStudentData(mssv) {
+    try {
+      const userData = await this.getUserInfo(mssv);
+      
+      if (!userData) {
+        return null;
+      }
 
-// TODO: Import axios
-// TODO: Import DatacoreConfig (API URL, API Key)
-// TODO: Import error classes (NotFoundError, InternalServerError)
+      // Check if user is a student
+      if (userData.role === 'STUDENT' || userData.student_id) {
+        return {
+          mssv: userData.student_id || mssv,
+          fullName: userData.full_name || userData.name,
+          email: userData.email,
+          faculty: userData.faculty || userData.department,
+          major: userData.major || userData.faculty,
+          enrollmentYear: userData.enrollment_year || new Date().getFullYear(),
+          currentYear: userData.current_year || 1,
+          gpa: parseFloat(userData.gpa) || 0,
+          totalCredits: parseInt(userData.total_credits) || 0,
+          role: 'STUDENT'
+        };
+      }
 
-// TODO: Implement getStudentData(mssv)
-// TODO: Implement getTutorData(maCB)
-// TODO: Implement determineType(position)
-// TODO: Implement validateDatacoreConnection()
+      return null;
+    } catch (error) {
+      console.error('[DATACORE] Get student data error:', error.message);
+      return null;
+    }
+  }
 
-// TODO: Export all functions
+  /**
+   * Get tutor/staff data from DATACORE by Mã CB
+   */
+  static async getTutorData(maCB) {
+    try {
+      const userData = await this.getUserInfo(maCB);
+      
+      if (!userData) {
+        return null;
+      }
+
+      // Check if user is staff/lecturer (not student)
+      if (userData.role !== 'STUDENT' && (userData.staff_id || userData.role)) {
+        return {
+          maCB: userData.staff_id || maCB,
+          fullName: userData.full_name || userData.name,
+          email: userData.email,
+          faculty: userData.faculty || userData.department,
+          role: userData.role || 'TUTOR',
+          expertise: userData.expertise || [],
+          bio: userData.bio || '',
+          position: userData.position || 'Lecturer'
+        };
+      }
+
+      return null;
+    } catch (error) {
+      console.error('[DATACORE] Get tutor data error:', error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Sync user data from DATACORE
+   */
+  static async syncUser(userId) {
+    try {
+      const userData = await this.getUserInfo(userId);
+      
+      if (!userData) {
+        console.warn('[DATACORE] User not found for sync:', userId);
+        return null;
+      }
+
+      // Determine if student or staff
+      if (userData.role === 'STUDENT' || userData.student_id) {
+        return await this.getStudentData(userData.student_id || userId);
+      } else if (userData.staff_id || userData.role !== 'STUDENT') {
+        return await this.getTutorData(userData.staff_id || userId);
+      }
+
+      return userData;
+    } catch (error) {
+      console.error('[DATACORE] Sync user error:', error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Sync all users from DATACORE
+   */
+  static async syncAllUsers() {
+    try {
+      const url = `${datacoreConfig.apiUrl}/users/sync`;
+      const response = await axios.get(url, {
+        timeout: (datacoreConfig.timeout || 5000) * 2
+      });
+
+      if (!response.data || !response.data.success) {
+        return [];
+      }
+
+      return response.data.data || [];
+    } catch (error) {
+      console.error('[DATACORE] Sync all users error:', error.message);
+      return [];
+    }
+  }
+
+  /**
+   * Map DATACORE role to system role
+   */
+  static mapRole(datacoreRole) {
+    const roleMapping = {
+      'STUDENT': 'STUDENT',
+      'LECTURER': 'TUTOR',
+      'RESEARCH_STUDENT': 'TUTOR',
+      'SENIOR_STUDENT': 'TUTOR',
+      'STAFF': 'TUTOR',
+      'ADMIN': 'ADMIN'
+    };
+    return roleMapping[datacoreRole?.toUpperCase()] || 'STUDENT';
+  }
+
+  /**
+   * Map DATACORE role to tutor type
+   */
+  static mapTutorType(datacoreRole) {
+    const typeMapping = {
+      'LECTURER': 'LECTURER',
+      'RESEARCH_STUDENT': 'RESEARCH_STUDENT',
+      'SENIOR_STUDENT': 'SENIOR_STUDENT',
+      'STAFF': 'LECTURER'
+    };
+    return typeMapping[datacoreRole?.toUpperCase()] || 'LECTURER';
+  }
+
+  /**
+   * Validate DATACORE connection (health check)
+   */
+  static async validateConnection() {
+    try {
+      const healthUrl = `${datacoreConfig.apiUrl}/health`;
+      const response = await axios.get(healthUrl, { timeout: 3000 });
+      
+      return {
+        status: 'OK',
+        message: 'DATACORE service is reachable',
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        status: 'ERROR',
+        message: 'DATACORE service unavailable',
+        error: error.message
+      };
+    }
+  }
+}
+
+module.exports = DatacoreService;

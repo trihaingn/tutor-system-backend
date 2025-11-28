@@ -25,3 +25,6 @@ pids
 
 # Testing
 coverage/
+
+*.md
+*.txt

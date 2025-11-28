@@ -170,30 +170,181 @@
 //   token: "JWT string"
 // }
 
-// TODO: Import dependencies (SSOService, DatacoreService, UserService, jsonwebtoken)
+const jwt = require('jsonwebtoken');
+const SSOService = require('../integration/SSOService');
+const DatacoreService = require('../integration/DatacoreService');
+const UserService = require('../user/UserService');
+const { AuthenticationError, InternalServerError } = require('../../middleware/errorMiddleware');
 
-// TODO: Implement validateSSOTicket(ticket)
-// - Call SSOService.validateTicket()
-// - Return user info or throw error
+/**
+ * Validate SSO ticket từ HCMUT SSO portal
+ */
+async function validateSSOTicket(ticket, service) {
+  try {
+    const ssoUserInfo = await SSOService.validateTicket(ticket, service);
+    
+    if (!ssoUserInfo) {
+      throw new AuthenticationError('Invalid SSO ticket');
+    }
 
-// TODO: Implement syncAndCreateUser(ssoUserInfo)
-// - BR-007: Sync from DATACORE
-// - Merge SSO + DATACORE data
-// - Create/Update User, Student, Tutor
-// - Return complete user object
+    return ssoUserInfo;
+  } catch (error) {
+    if (error instanceof AuthenticationError) {
+      throw error;
+    }
+    throw new InternalServerError('SSO service unavailable');
+  }
+}
 
-// TODO: Implement generateJWT(user)
-// - Extract payload
-// - Sign JWT with secret
-// - Return JWT string
+/**
+ * Sync DATACORE và create/update User (BR-007)
+ */
+async function syncAndCreateUser(ssoUserInfo) {
+  let datacoreData = null;
+  let role = 'STUDENT'; // Default role
+  let tutorType = null;
 
-// TODO: Implement verifyJWT(token)
-// - Verify signature and expiration
-// - Decode payload
-// - Return user info
+  // BR-007: Sync from DATACORE
+  try {
+    if (ssoUserInfo.mssv) {
+      // Student - sync from DATACORE
+      datacoreData = await DatacoreService.getStudentData(ssoUserInfo.mssv);
+      role = 'STUDENT';
+    } else if (ssoUserInfo.maCB) {
+      // Staff/Lecturer - sync from DATACORE
+      datacoreData = await DatacoreService.getTutorData(ssoUserInfo.maCB);
+      role = DatacoreService.mapRole(datacoreData?.role || 'TUTOR');
+      tutorType = DatacoreService.mapTutorType(datacoreData?.role);
+    }
+  } catch (error) {
+    console.warn('DATACORE sync failed, using SSO data only:', error.message);
+  }
 
-// TODO: Implement login(ticket)
-// - Orchestrate: validateSSOTicket → syncAndCreateUser → generateJWT
-// - Return { user, token }
+  // Merge SSO + DATACORE data
+  const userData = {
+    email: ssoUserInfo.email,
+    mssv: ssoUserInfo.mssv || datacoreData?.mssv || null,
+    maCB: ssoUserInfo.maCB || datacoreData?.maCB || null,
+    fullName: datacoreData?.fullName || ssoUserInfo.fullName,
+    faculty: datacoreData?.faculty || ssoUserInfo.faculty,
+    role: role,
+    status: 'ACTIVE'
+  };
 
-// TODO: Export all functions
+  // Create or update User
+  const user = await UserService.createOrUpdateUser(userData);
+
+  // Create or update Student profile
+  if (role === 'STUDENT' && ssoUserInfo.mssv) {
+    const studentData = {
+      mssv: ssoUserInfo.mssv,
+      major: datacoreData?.major || ssoUserInfo.faculty,
+      enrollmentYear: datacoreData?.enrollmentYear || new Date().getFullYear(),
+      currentYear: datacoreData?.currentYear || 1,
+      gpa: datacoreData?.gpa || 0,
+      totalCredits: datacoreData?.totalCredits || 0
+    };
+    await UserService.createOrUpdateStudent(user._id, studentData);
+  }
+
+  // Create or update Tutor profile
+  if ((role === 'TUTOR' || role === 'ADMIN') && ssoUserInfo.maCB) {
+    const tutorData = {
+      maCB: ssoUserInfo.maCB,
+      type: tutorType || 'LECTURER',
+      expertise: datacoreData?.expertise || [],
+      bio: datacoreData?.bio || ''
+    };
+    await UserService.createOrUpdateTutor(user._id, tutorData);
+  }
+
+  // Return complete user with populated profile
+  const completeUser = await UserService.getUserById(user._id);
+  return completeUser;
+}
+
+/**
+ * Generate JWT token for authenticated user
+ */
+function generateJWT(user) {
+  const payload = {
+    userId: user._id,
+    email: user.email,
+    role: user.role,
+    status: user.status
+  };
+
+  const secret = process.env.JWT_SECRET || 'your-secret-key';
+  const expiresIn = process.env.JWT_EXPIRES_IN || '1d';
+
+  const token = jwt.sign(payload, secret, { expiresIn });
+  return token;
+}
+
+/**
+ * Verify JWT token
+ */
+function verifyJWT(token) {
+  try {
+    const secret = process.env.JWT_SECRET || 'your-secret-key';
+    const decoded = jwt.verify(token, secret);
+    return decoded;
+  } catch (error) {
+    if (error.name === 'TokenExpiredError') {
+      throw new AuthenticationError('Token expired');
+    }
+    if (error.name === 'JsonWebTokenError') {
+      throw new AuthenticationError('Invalid token');
+    }
+    throw new AuthenticationError('No token provided');
+  }
+}
+
+/**
+ * Complete login flow (UC-01 + UC-04)
+ */
+async function login(ticket, service) {
+  // Step 1: Validate SSO ticket
+  const ssoUserInfo = await validateSSOTicket(ticket, service);
+
+  // Step 2: Sync DATACORE and create/update User
+  const user = await syncAndCreateUser(ssoUserInfo);
+
+  // Step 3: Generate JWT
+  const token = generateJWT(user);
+
+  // Step 4: Return user + token
+  return {
+    user: {
+      userId: user._id,
+      email: user.email,
+      fullName: user.fullName,
+      role: user.role,
+      status: user.status,
+      mssv: user.mssv,
+      maCB: user.maCB,
+      student: user.student || null,
+      tutor: user.tutor || null
+    },
+    token
+  };
+}
+
+/**
+ * Logout (UC-02)
+ * Note: JWT is stateless, logout is handled client-side by removing token
+ */
+async function logout() {
+  // In JWT-based auth, logout is client-side operation
+  // Server-side logout would require token blacklisting (Redis)
+  return { success: true, message: 'Logged out successfully' };
+}
+
+module.exports = {
+  validateSSOTicket,
+  syncAndCreateUser,
+  generateJWT,
+  verifyJWT,
+  login,
+  logout
+};

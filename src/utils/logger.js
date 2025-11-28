@@ -14,132 +14,70 @@
  * - File: Production (logs/error.log, logs/combined.log)
  */
 
-// TODO: Import winston
-// const winston = require('winston')
-// const path = require('path')
+// Simple console-based logger implementation
+// Can be replaced with Winston when winston is installed
 
-// ============================================================
-// LOG FORMATS
-// ============================================================
-// PURPOSE: Define log format
-// 
-// PSEUDOCODE:
-// const logFormat = winston.format.combine(
-//   // Add timestamp
-//   winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-//   
-//   // Add error stack trace
-//   winston.format.errors({ stack: true }),
-//   
-//   // Add metadata
-//   winston.format.metadata(),
-//   
-//   // Format message
-//   winston.format.printf((info) => {
-//     const { timestamp, level, message, metadata } = info
-//     
-//     let log = `${timestamp} [${level.toUpperCase()}]: ${message}`
-//     
-//     // Add metadata if exists
-//     if (Object.keys(metadata).length > 0) {
-//       log += ` ${JSON.stringify(metadata)}`
-//     }
-//     
-//     return log
-//   })
-// )
-
-// ============================================================
-// CONSOLE TRANSPORT (Development)
-// ============================================================
-// PSEUDOCODE:
-// const consoleTransport = new winston.transports.Console({
-//   format: winston.format.combine(
-//     winston.format.colorize(),
-//     logFormat
-//   )
-// })
-
-// ============================================================
-// FILE TRANSPORTS (Production)
-// ============================================================
-// PSEUDOCODE:
-// const fileTransports = [
-//   // Error logs
-//   new winston.transports.File({
-//     filename: path.join(__dirname, '../../logs/error.log'),
-//     level: 'error',
-//     maxsize: 5242880, // 5MB
-//     maxFiles: 5,
-//     format: logFormat
-//   }),
-//   
-//   // Combined logs (all levels)
-//   new winston.transports.File({
-//     filename: path.join(__dirname, '../../logs/combined.log'),
-//     maxsize: 5242880, // 5MB
-//     maxFiles: 5,
-//     format: logFormat
-//   })
-// ]
-
-// ============================================================
-// LOGGER INSTANCE
-// ============================================================
-// PURPOSE: Create Winston logger
-// 
-// PSEUDOCODE:
-// const logger = winston.createLogger({
-//   level: process.env.LOG_LEVEL || 'info',
-//   
-//   transports: [
-//     consoleTransport,
-//     ...(process.env.NODE_ENV === 'production' ? fileTransports : [])
-//   ],
-//   
-//   // Don't exit on error
-//   exitOnError: false
-// })
+const logger = {
+  info: (message, meta = {}) => {
+    const timestamp = new Date().toISOString();
+    console.log(`${timestamp} [INFO]: ${message}`, Object.keys(meta).length > 0 ? meta : '');
+  },
+  
+  error: (message, meta = {}) => {
+    const timestamp = new Date().toISOString();
+    console.error(`${timestamp} [ERROR]: ${message}`, Object.keys(meta).length > 0 ? meta : '');
+  },
+  
+  warn: (message, meta = {}) => {
+    const timestamp = new Date().toISOString();
+    console.warn(`${timestamp} [WARN]: ${message}`, Object.keys(meta).length > 0 ? meta : '');
+  },
+  
+  debug: (message, meta = {}) => {
+    if (process.env.NODE_ENV === 'development') {
+      const timestamp = new Date().toISOString();
+      console.debug(`${timestamp} [DEBUG]: ${message}`, Object.keys(meta).length > 0 ? meta : '');
+    }
+  }
+};
 
 // ============================================================
 // LOGGER METHODS
 // ============================================================
-// PURPOSE: Helper methods cho common logging patterns
-// 
-// PSEUDOCODE:
-// const logRequest = (req) => {
-//   logger.info('HTTP Request', {
-//     method: req.method,
-//     url: req.originalUrl,
-//     ip: req.ip,
-//     userId: req.userId || null
-//   })
-// }
-// 
-// const logError = (error, context = {}) => {
-//   logger.error(error.message, {
-//     stack: error.stack,
-//     ...context
-//   })
-// }
-// 
-// const logDebug = (message, data = {}) => {
-//   if (process.env.NODE_ENV === 'development') {
-//     logger.debug(message, data)
-//   }
-// }
+// PURPOSE: Helper methods for common logging patterns
+
+const logRequest = (req) => {
+  logger.info('HTTP Request', {
+    method: req.method,
+    url: req.originalUrl,
+    ip: req.ip,
+    userId: req.userId || null
+  });
+};
+
+const logError = (error, context = {}) => {
+  logger.error(error.message, {
+    stack: error.stack,
+    ...context
+  });
+};
+
+const logDebug = (message, data = {}) => {
+  if (process.env.NODE_ENV === 'development') {
+    logger.debug(message, data);
+  }
+};
 
 // ============================================================
 // STREAM FOR MORGAN
 // ============================================================
 // PURPOSE: Stream Winston logs to Morgan (HTTP logger)
-// 
-// PSEUDOCODE:
-// const morganStream = {
-//   write: (message) => {
-//     logger.info(message.trim())
-//   }
-// }
+
+const morganStream = {
+  write: (message) => {
+    logger.info(message.trim());
+  }
+};
 
 // ============================================================
 // USAGE EXAMPLES
@@ -149,11 +87,15 @@
 // logger.warn('Rate limit exceeded', { userId: '123', endpoint: '/api/sessions' })
 // logger.debug('Query result', { result: data })
 
-// TODO: Export logger and helpers
-// module.exports = {
-//   logger,
-//   logRequest,
-//   logError,
-//   logDebug,
-//   morganStream
-// }
+module.exports = {
+  logger,
+  logRequest,
+  logError,
+  logDebug,
+  morganStream,
+  // Also export logger methods directly for convenience
+  info: logger.info,
+  error: logger.error,
+  warn: logger.warn,
+  debug: logger.debug
+};

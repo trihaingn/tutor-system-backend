@@ -83,12 +83,161 @@
 // PSEUDOCODE:
 // - return `${SSO_BASE_URL}/logout`
 
-// TODO: Import axios, xml2js (for XML parsing)
-// TODO: Import SSOConfig (SSO_BASE_URL, SERVICE_URL)
-// TODO: Import AuthenticationError
+const axios = require('axios');
+const ssoConfig = require('../../config/sso.config');
+const { AuthenticationError, InternalServerError } = require('../../middleware/errorMiddleware');
 
-// TODO: Implement getLoginUrl()
-// TODO: Implement validateTicket(ticket)
-// TODO: Implement getLogoutUrl()
+/**
+ * SSOService - CAS SSO Integration
+ * Integrates with real CAS server
+ */
 
-// TODO: Export all functions
+class SSOService {
+  /**
+   * Generate SSO login URL
+   * @returns {string} SSO login URL
+   */
+  static getLoginUrl() {
+    if (!ssoConfig.enabled) {
+      // Mock mode: return mock URL
+      return `${ssoConfig.baseUrl}/login?service=${encodeURIComponent(ssoConfig.serviceUrl)}`;
+    }
+    
+    // Real CAS login URL
+    return `${ssoConfig.loginUrl}?service=${encodeURIComponent(ssoConfig.serviceUrl)}`;
+  }
+
+  /**
+   * Validate SSO ticket with CAS server
+   * @param {string} ticket - SSO ticket from callback
+   * @param {string} service - Service URL
+   * @returns {Promise<Object>} User info from SSO
+   */
+  static async validateTicket(ticket, service) {
+    if (!ssoConfig.enabled) {
+      // Mock mode: return mock user data based on ticket
+      console.log('[SSO] Mock mode enabled, returning mock data');
+      return this._mockValidateTicket(ticket);
+    }
+
+    try {
+      console.log('[SSO] Validating ticket with CAS server:', ssoConfig.validateUrl);
+      
+      // Call CAS validation endpoint
+      const response = await axios.get(ssoConfig.validateUrl, {
+        params: { ticket, service },
+        timeout: 10000
+      });
+
+      if (!response.data || !response.data.success) {
+        throw new AuthenticationError('Invalid SSO ticket');
+      }
+
+      // Extract user info from CAS response
+      const userData = response.data.user;
+      
+      return {
+        success: true,
+        email: userData.email,
+        mssv: userData.mssv || null,
+        maCB: userData.maCB || null,
+        fullName: userData.fullName || userData.name,
+        faculty: userData.faculty || userData.department,
+        role: userData.role || 'STUDENT'
+      };
+
+    } catch (error) {
+      if (error instanceof AuthenticationError) {
+        throw error;
+      }
+      console.error('[SSO] Validation error:', error.message);
+      throw new InternalServerError(`SSO validation failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Generate SSO logout URL
+   * @returns {string} SSO logout URL
+   */
+  static getLogoutUrl() {
+    if (!ssoConfig.enabled) {
+      return `${ssoConfig.baseUrl}/logout`;
+    }
+    return `${ssoConfig.logoutUrl}`;
+  }
+
+  /**
+   * Check SSO service health
+   */
+  static async validateConnection() {
+    try {
+      if (!ssoConfig.enabled) {
+        return { status: 'OK', message: 'SSO disabled (mock mode)' };
+      }
+
+      const healthUrl = `${ssoConfig.baseUrl}/health`;
+      const response = await axios.get(healthUrl, { timeout: 3000 });
+
+      return {
+        status: 'OK',
+        message: 'SSO service is reachable',
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        status: 'ERROR',
+        message: 'SSO service unavailable',
+        error: error.message
+      };
+    }
+  }
+
+  /**
+   * MOCK: Validate ticket (for development)
+   * @private
+   * @param {string} ticket - Mock ticket
+   * @returns {Object} Mock user data
+   */
+  static _mockValidateTicket(ticket) {
+    // Mock ticket validation
+    if (!ticket || !ticket.startsWith('ST-')) {
+      throw new AuthenticationError('Invalid ticket format');
+    }
+
+    // Parse ticket to determine user type
+    if (ticket.includes('student')) {
+      return {
+        success: true,
+        email: 'student@hcmut.edu.vn',
+        mssv: '2210001',
+        maCB: null,
+        fullName: 'Nguyen Van A',
+        faculty: 'Computer Science',
+        role: 'STUDENT'
+      };
+    } else if (ticket.includes('tutor') || ticket.includes('lecturer')) {
+      return {
+        success: true,
+        email: 'tutor@hcmut.edu.vn',
+        mssv: null,
+        maCB: 'CB001',
+        fullName: 'Prof. Tran Van B',
+        faculty: 'Computer Science',
+        role: 'TUTOR'
+      };
+    } else {
+      // Default student
+      return {
+        success: true,
+        email: 'user@hcmut.edu.vn',
+        mssv: '2210099',
+        maCB: null,
+        fullName: 'Test User',
+        faculty: 'General',
+        role: 'STUDENT'
+      };
+    }
+  }
+}
+
+module.exports = SSOService;

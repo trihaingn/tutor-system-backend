@@ -120,22 +120,108 @@
 // - Registration not found → 404 NotFoundError
 // - Not owned by user → 403 ForbiddenError
 
-// TODO: Import dependencies (CourseRegistrationService, error classes)
+const CourseRegistrationService = require('../services/registration/CourseRegistrationService');
+const StudentRepository = require('../repositories/StudentRepository');
+const { asyncHandler } = require('../middleware/errorMiddleware');
+const { ValidationError } = require('../middleware/errorMiddleware');
 
-// TODO: Implement registerCourse() - POST /api/v1/registrations
-// - Extract studentId from req.user
-// - Validate input
-// - Call service layer
-// - Return response
+/**
+ * POST /api/v1/registrations
+ * Student registers with Tutor for a subject (UC-08)
+ */
+const registerCourse = asyncHandler(async (req, res) => {
+  const { tutorId, subjectId } = req.body;
+  
+  // Validation
+  if (!tutorId || !subjectId) {
+    throw new ValidationError('tutorId and subjectId are required');
+  }
 
-// TODO: Implement getMyRegistrations() - GET /api/v1/registrations/me
-// - Extract studentId
-// - Query with optional status filter
-// - Populate tutor info
-// - Return with pagination
+  // Get studentId from authenticated user
+  const userId = req.userId;
+  const student = await StudentRepository.findByUserId(userId);
+  
+  if (!student) {
+    throw new ValidationError('User is not a student');
+  }
 
-// TODO: Implement cancelRegistration() - DELETE /api/v1/registrations/:id
-// - Validate ownership
-// - Update status to CANCELLED
+  // Call service to register course
+  const registration = await CourseRegistrationService.registerCourse(
+    student._id,
+    tutorId,
+    subjectId
+  );
 
-// TODO: Export controller functions
+  res.status(201).json({
+    success: true,
+    data: {
+      registrationId: registration._id,
+      studentId: registration.studentId,
+      tutorId: registration.tutorId,
+      subjectId: registration.subjectId,
+      status: registration.status,
+      registeredAt: registration.registeredAt,
+      message: 'Registration successful! You can now book appointments.'
+    }
+  });
+});
+
+/**
+ * GET /api/v1/registrations/me
+ * Student views own registrations
+ */
+const getMyRegistrations = asyncHandler(async (req, res) => {
+  const { status, subjectId } = req.query;
+  
+  // Get studentId from authenticated user
+  const userId = req.userId;
+  const student = await StudentRepository.findByUserId(userId);
+  
+  if (!student) {
+    throw new ValidationError('User is not a student');
+  }
+
+  const filters = {};
+  if (status) filters.status = status;
+  if (subjectId) filters.subjectId = subjectId;
+
+  const registrations = await CourseRegistrationService.getStudentRegistrations(
+    student._id,
+    filters
+  );
+
+  res.status(200).json({
+    success: true,
+    data: registrations
+  });
+});
+
+/**
+ * DELETE /api/v1/registrations/:id
+ * Student cancels registration
+ */
+const cancelRegistration = asyncHandler(async (req, res) => {
+  const { id } = req.params;
+  
+  // Get studentId from authenticated user
+  const userId = req.userId;
+  const student = await StudentRepository.findByUserId(userId);
+  
+  if (!student) {
+    throw new ValidationError('User is not a student');
+  }
+
+  const result = await CourseRegistrationService.cancelRegistration(id, student._id);
+
+  res.status(200).json({
+    success: true,
+    message: 'Registration cancelled successfully',
+    data: result.registration
+  });
+});
+
+module.exports = {
+  registerCourse,
+  getMyRegistrations,
+  cancelRegistration
+};

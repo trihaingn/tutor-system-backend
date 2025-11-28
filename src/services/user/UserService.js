@@ -141,12 +141,111 @@
 // OUTPUT:
 // - Return User object (populated)
 
-// TODO: Import User, Student, Tutor models
-// TODO: Import error classes (NotFoundError)
+const User = require('../../models/User.model');
+const Student = require('../../models/Student.model');
+const Tutor = require('../../models/Tutor.model');
+const { NotFoundError } = require('../../middleware/errorMiddleware');
 
-// TODO: Implement createOrUpdateUser(userData)
-// TODO: Implement createOrUpdateStudent(userId, studentData)
-// TODO: Implement createOrUpdateTutor(userId, tutorData)
-// TODO: Implement getUserById(userId)
+/**
+ * Tạo hoặc update User record
+ */
+async function createOrUpdateUser(userData) {
+  let user = await User.findOne({ email: userData.email });
 
-// TODO: Export all functions
+  if (user) {
+    // Update existing user
+    Object.assign(user, userData);
+    user.lastSyncAt = new Date();
+    await user.save();
+  } else {
+    // Create new user
+    user = await User.create({
+      ...userData,
+      lastSyncAt: new Date(),
+      syncSource: 'DATACORE'
+    });
+  }
+
+  return user;
+}
+
+/**
+ * Tạo hoặc update Student profile
+ */
+async function createOrUpdateStudent(userId, studentData) {
+  let student = await Student.findOne({ userId });
+
+  if (student) {
+    // Update existing student
+    Object.assign(student, studentData);
+    await student.save();
+  } else {
+    // Create new student with default statistics
+    student = await Student.create({
+      userId,
+      ...studentData,
+      registeredTutors: 0,
+      totalSessionsAttended: 0,
+      totalAppointments: 0,
+      completedAppointments: 0,
+      cancelledAppointments: 0,
+      averageRatingGiven: 0
+    });
+  }
+
+  return student;
+}
+
+/**
+ * Tạo hoặc update Tutor profile
+ */
+async function createOrUpdateTutor(userId, tutorData) {
+  let tutor = await Tutor.findOne({ userId });
+
+  if (tutor) {
+    // Update existing tutor
+    Object.assign(tutor, tutorData);
+    await tutor.save();
+  } else {
+    // Create new tutor with default statistics
+    tutor = await Tutor.create({
+      userId,
+      ...tutorData,
+      totalStudents: 0,
+      totalSessions: 0,
+      completedSessions: 0,
+      averageRating: 0,
+      totalReviews: 0,
+      isAcceptingStudents: true
+    });
+  }
+
+  return tutor;
+}
+
+/**
+ * Lấy User với populated Student/Tutor
+ */
+async function getUserById(userId) {
+  const user = await User.findById(userId);
+  
+  if (!user) {
+    throw new NotFoundError('User không tồn tại');
+  }
+
+  // Populate based on role
+  if (user.role === 'STUDENT') {
+    await user.populate('student');
+  } else if (user.role === 'TUTOR' || user.role === 'ADMIN') {
+    await user.populate('tutor');
+  }
+
+  return user;
+}
+
+module.exports = {
+  createOrUpdateUser,
+  createOrUpdateStudent,
+  createOrUpdateTutor,
+  getUserById
+};

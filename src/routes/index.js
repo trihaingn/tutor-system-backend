@@ -96,5 +96,38 @@
 //   })
 // })
 
-// TODO: Export router
-// module.exports = router
+const express = require('express');
+const router = express.Router();
+
+// Import all sub-routes
+const authRoutes = require('./auth.routes');
+const registrationRoutes = require('./registration.routes');
+const studentRoutes = require('./student.routes');
+const tutorRoutes = require('./tutor.routes');
+
+// Mount sub-routes
+router.use('/auth', authRoutes);
+router.use('/registrations', registrationRoutes);
+router.use('/students', studentRoutes);
+router.use('/tutors', tutorRoutes);
+
+// Health check endpoint
+router.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'OK',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// 404 handler for API routes
+router.use((req, res) => {
+  res.status(404).json({
+    success: false,
+    message: `Route ${req.originalUrl} not found`,
+    statusCode: 404
+  });
+});
+
+module.exports = router;

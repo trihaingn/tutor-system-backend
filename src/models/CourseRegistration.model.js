@@ -50,32 +50,74 @@
  * - Ngăn chặn: Duplicate registration (same Student+Tutor+Subject)
  */
 
-// TODO: Import mongoose
+const mongoose = require('mongoose');
 
-// TODO: Định nghĩa CourseRegistrationSchema
-// const CourseRegistrationSchema = new mongoose.Schema({
-//   studentId: { type: mongoose.Schema.Types.ObjectId, ref: 'Student', required: true, index: true },
-//   tutorId: { type: mongoose.Schema.Types.ObjectId, ref: 'Tutor', required: true, index: true },
-//   subjectId: { type: String, required: true, index: true },
-//   status: { type: String, enum: ['ACTIVE', 'INACTIVE', 'CANCELLED'], default: 'ACTIVE', index: true },
-//   registeredAt: { type: Date, default: Date.now, index: true },
-//   approvedAt: { type: Date, default: Date.now },
-//   approvedBy: { type: String, default: 'SYSTEM' },
-//   notes: { type: String, maxlength: 500 }
-// }, {
-//   timestamps: true,
-//   collection: 'course_registrations'
-// });
+const CourseRegistrationSchema = new mongoose.Schema(
+  {
+    // Core Relationship (M-N-M)
+    studentId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Student',
+      required: true,
+      index: true
+    },
+    tutorId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Tutor',
+      required: true,
+      index: true
+    },
+    subjectId: {
+      type: String,
+      required: true,
+      index: true
+    },
+    
+    // Registration Metadata
+    status: {
+      type: String,
+      enum: ['ACTIVE', 'INACTIVE', 'CANCELLED'],
+      default: 'ACTIVE',
+      index: true
+    },
+    registeredAt: {
+      type: Date,
+      default: Date.now,
+      index: true
+    },
+    
+    // Version 2.0: Auto-approval (BR-005)
+    approvedAt: {
+      type: Date,
+      default: Date.now
+    },
+    approvedBy: {
+      type: String,
+      default: 'SYSTEM'
+    },
+    
+    // Optional notes
+    notes: {
+      type: String,
+      maxlength: 500
+    }
+  },
+  {
+    timestamps: true,
+    collection: 'course_registrations'
+  }
+);
 
-// TODO: ⚠️ CRITICAL - Thêm composite unique index
-// CourseRegistrationSchema.index(
-//   { studentId: 1, tutorId: 1, subjectId: 1 },
-//   { unique: true }
-// );
+// ⚠️ CRITICAL: Composite unique index (BR-006)
+// Prevents duplicate: same Student + Tutor + Subject
+CourseRegistrationSchema.index(
+  { studentId: 1, tutorId: 1, subjectId: 1 },
+  { unique: true }
+);
 
-// TODO: Thêm query optimization indexes
-// CourseRegistrationSchema.index({ studentId: 1, status: 1 });
-// CourseRegistrationSchema.index({ tutorId: 1, status: 1 });
+// Query optimization indexes
+CourseRegistrationSchema.index({ studentId: 1, status: 1 });
+CourseRegistrationSchema.index({ tutorId: 1, status: 1 });
+CourseRegistrationSchema.index({ subjectId: 1, status: 1 });
 
-// TODO: Export model
-// module.exports = mongoose.model('CourseRegistration', CourseRegistrationSchema);
+module.exports = mongoose.model('CourseRegistration', CourseRegistrationSchema);

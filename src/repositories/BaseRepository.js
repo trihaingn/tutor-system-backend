@@ -222,8 +222,78 @@
 // OUTPUT:
 // - Boolean (true/false)
 
-// TODO: Implement BaseRepository class
-// class BaseRepository { ... }
+/**
+ * Base Repository - Generic CRUD operations
+ * Repository Pattern for database access
+ */
 
-// TODO: Export BaseRepository
-// module.exports = BaseRepository
+class BaseRepository {
+  constructor(model) {
+    this.model = model;
+  }
+
+  async create(data) {
+    const document = new this.model(data);
+    return await document.save();
+  }
+
+  async findById(id, populate = '') {
+    let query = this.model.findById(id);
+    if (populate) {
+      query = query.populate(populate);
+    }
+    return await query.exec();
+  }
+
+  async findOne(filter, populate = '') {
+    let query = this.model.findOne(filter);
+    if (populate) {
+      query = query.populate(populate);
+    }
+    return await query.exec();
+  }
+
+  async findAll(filter = {}, options = {}) {
+    let query = this.model.find(filter);
+
+    if (options.select) {
+      query = query.select(options.select);
+    }
+    if (options.populate) {
+      query = query.populate(options.populate);
+    }
+    if (options.sort) {
+      query = query.sort(options.sort);
+    }
+    if (options.skip) {
+      query = query.skip(options.skip);
+    }
+    if (options.limit) {
+      query = query.limit(options.limit);
+    }
+
+    return await query.exec();
+  }
+
+  async update(id, data) {
+    return await this.model.findByIdAndUpdate(id, data, {
+      new: true,
+      runValidators: true
+    });
+  }
+
+  async delete(id) {
+    return await this.model.findByIdAndDelete(id);
+  }
+
+  async count(filter = {}) {
+    return await this.model.countDocuments(filter);
+  }
+
+  async exists(filter) {
+    const result = await this.model.exists(filter);
+    return !!result;
+  }
+}
+
+module.exports = BaseRepository;
