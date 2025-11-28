@@ -120,10 +120,9 @@
 // - Registration not found → 404 NotFoundError
 // - Not owned by user → 403 ForbiddenError
 
-const CourseRegistrationService = require('../services/registration/CourseRegistrationService');
-const StudentRepository = require('../repositories/StudentRepository');
-const { asyncHandler } = require('../middleware/errorMiddleware');
-const { ValidationError } = require('../middleware/errorMiddleware');
+import * as CourseRegistrationService from '../services/registration/CourseRegistrationService.js';
+import StudentRepository from '../repositories/StudentRepository.js';
+import { asyncHandler, ValidationError } from '../middleware/errorMiddleware.js';
 
 /**
  * POST /api/v1/registrations
@@ -220,7 +219,7 @@ const cancelRegistration = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = {
+export {
   registerCourse,
   getMyRegistrations,
   cancelRegistration

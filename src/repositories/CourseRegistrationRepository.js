@@ -1,5 +1,5 @@
-const BaseRepository = require('./BaseRepository');
-const CourseRegistration = require('../models/CourseRegistration.model');
+import BaseRepository from './BaseRepository.js';
+import CourseRegistration from '../models/CourseRegistration.model.js';
 
 class CourseRegistrationRepository extends BaseRepository {
   constructor() {
@@ -70,4 +70,4 @@ class CourseRegistrationRepository extends BaseRepository {
   }
 }
 
-module.exports = new CourseRegistrationRepository();
+export default new CourseRegistrationRepository();

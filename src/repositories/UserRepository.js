@@ -157,10 +157,10 @@
 // OUTPUT:
 // - Array of active Users
 
-const BaseRepository = require('./BaseRepository');
-const User = require('../models/User.model');
-const Student = require('../models/Student.model');
-const Tutor = require('../models/Tutor.model');
+import BaseRepository from './BaseRepository.js';
+import User from '../models/User.model.js';
+import Student from '../models/Student.model.js';
+import Tutor from '../models/Tutor.model.js';
 
 class UserRepository extends BaseRepository {
   constructor() {
@@ -221,4 +221,4 @@ class UserRepository extends BaseRepository {
   }
 }
 
-module.exports = new UserRepository();
+export default new UserRepository();

@@ -86,7 +86,7 @@
 
 import express from 'express';
 const router = express.Router();
-import authController from '../controllers/auth.controller.js';
+import * as authController from '../controllers/auth.controller.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 
 // ============================================================
@@ -148,4 +148,4 @@ router.post('/logout', authMiddleware, authController.logout);
 // GET /api/v1/auth/me - Get current user info
 router.get('/me', authMiddleware, authController.getCurrentUser);
 
-module.exports = router;
+export default router;

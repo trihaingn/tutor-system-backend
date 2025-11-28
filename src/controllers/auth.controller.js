@@ -108,13 +108,15 @@
 //   }
 // }
 
-const AuthService = require('../services/auth/AuthService');
-const UserService = require('../services/user/UserService');
-const CASService = require('../services/auth/CASService');
-const { asyncHandler } = require('../middleware/errorMiddleware');
-const { SSO_LOGIN_URL, SSO_SERVICE_URL } = require('../config/sso.config');
-const casConfig = require('../config/cas.config');
-const jwt = require('jsonwebtoken');
+import * as AuthService from '../services/auth/AuthService.js';
+import * as UserService from '../services/user/UserService.js';
+import CASService from '../services/auth/CASService.js';
+import { asyncHandler } from '../middleware/errorMiddleware.js';
+import ssoConfig from '../config/sso.config.js';
+import casConfig from '../config/cas.config.js';
+import jwt from 'jsonwebtoken';
+
+const { SSO_LOGIN_URL, SSO_SERVICE_URL } = ssoConfig;
 
 /**
  * GET /api/v1/auth/login
@@ -200,7 +202,7 @@ const getCurrentUser = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = {
+export {
   login,
   handleCallback,
   logout,
@@ -301,7 +303,7 @@ async function casCallback(req, res) {
 
     // Step 2: Find or create user in local database
     // The User model should have fields: email, username, etc.
-    const User = require('../models/User.model');
+    const { default: User } = await import('../models/User.model.js');
     
     let user = await User.findOne({ email: casUserData.email });
 

@@ -15,10 +15,10 @@
  * 4. If token invalid/expired → redirect to CAS login
  */
 
-const jwt = require('jsonwebtoken');
-const CASService = require('../services/auth/CASService');
-const casConfig = require('../config/cas.config');
-const logger = require('../utils/logger');
+import jwt from 'jsonwebtoken';
+import CASService from '../services/auth/CASService.js';
+import casConfig from '../config/cas.config.js';
+import { logger } from '../utils/logger.js';
 
 /**
  * Middleware: Require CAS Authentication
@@ -64,7 +64,7 @@ async function requireCASAuthentication(req, res, next) {
     req.userRole = decoded.role;
 
     // Step 5: (Optional) Load full user from database
-    const User = require('../models/User.model');
+    const { default: User } = await import('../models/User.model.js');
     const user = await User.findById(decoded.userId).select('-password');
     
     if (!user) {
@@ -168,7 +168,7 @@ async function optionalCASAuthentication(req, res, next) {
       req.userRole = decoded.role;
 
       // Load user from database
-      const User = require('../models/User.model');
+      const { default: User } = await import('../models/User.model.js');
       const user = await User.findById(decoded.userId).select('-password');
       
       if (user && user.status === 'ACTIVE') {
@@ -188,7 +188,7 @@ async function optionalCASAuthentication(req, res, next) {
   }
 }
 
-module.exports = {
+export {
   requireCASAuthentication,
   optionalCASAuthentication
 };

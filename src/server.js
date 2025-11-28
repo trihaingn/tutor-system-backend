@@ -159,9 +159,11 @@
 //   process.exit(1)
 // })
 
-require('dotenv').config();
-const app = require('./app');
-const { connectDB, disconnectDB } = require('./database/connection');
+import dotenv from 'dotenv';
+dotenv.config();
+
+import app from './app.js';
+import { connectDB, disconnectDB } from './database/connection.js';
 
 const PORT = process.env.PORT || 5000;
 const NODE_ENV = process.env.NODE_ENV || 'development';

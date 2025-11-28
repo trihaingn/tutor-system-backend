@@ -184,8 +184,8 @@
 // 
 // startServer()
 
-const mongoose = require('mongoose');
-const databaseConfig = require('../config/database.config');
+import mongoose from 'mongoose';
+import databaseConfig from '../config/database.config.js';
 
 let connection = null;
 
@@ -292,7 +292,7 @@ const healthCheck = async () => {
   }
 };
 
-module.exports = {
+export {
   connectDB,
   disconnectDB,
   getConnectionStatus,

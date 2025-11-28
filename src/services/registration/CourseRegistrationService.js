@@ -258,12 +258,12 @@ import CourseRegistration from '../../models/CourseRegistration.model.js';
 import Student from '../../models/Student.model.js';
 import Tutor from '../../models/Tutor.model.js';
 import CourseRegistrationRepository from '../../repositories/CourseRegistrationRepository.js';
-const { 
+import { 
   ValidationError, 
   ConflictError, 
   NotFoundError, 
   AuthorizationError 
-} = require('../../middleware/errorMiddleware');
+} from '../../middleware/errorMiddleware.js';
 
 /**
  * Validate registration data

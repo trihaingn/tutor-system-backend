@@ -130,7 +130,7 @@ const isTutor = roleMiddleware(['TUTOR', 'ADMIN']);
 const isAdmin = roleMiddleware(['ADMIN']);
 const isStudentOrTutor = roleMiddleware(['STUDENT', 'TUTOR', 'ADMIN']);
 
-module.exports = {
+export {
   roleMiddleware,
   isStudent,
   isTutor,

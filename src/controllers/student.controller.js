@@ -128,10 +128,9 @@
 //   "pagination": {...}
 // }
 
-const StudentService = require('../services/user/StudentService');
-const StudentRepository = require('../repositories/StudentRepository');
-const { asyncHandler } = require('../middleware/errorMiddleware');
-const { ValidationError } = require('../middleware/errorMiddleware');
+import * as StudentService from '../services/user/StudentService.js';
+import StudentRepository from '../repositories/StudentRepository.js';
+import { asyncHandler, ValidationError } from '../middleware/errorMiddleware.js';
 
 /**
  * GET /api/v1/students/me
@@ -157,6 +156,6 @@ const getMyProfile = asyncHandler(async (req, res) => {
   });
 });
 
-module.exports = {
+export {
   getMyProfile
 };

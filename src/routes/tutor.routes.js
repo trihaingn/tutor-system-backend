@@ -99,7 +99,7 @@
 
 import express from 'express';
 const router = express.Router();
-import tutorController from '../controllers/tutor.controller.js';
+import * as tutorController from '../controllers/tutor.controller.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 
 // GET /api/v1/tutors/search - Search tutors

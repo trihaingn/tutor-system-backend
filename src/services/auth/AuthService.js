@@ -173,7 +173,7 @@
 import jwt from 'jsonwebtoken';
 import SSOService from '../integration/SSOService.js';
 import DatacoreService from '../integration/DatacoreService.js';
-import UserService from '../user/UserService.js';
+import * as UserService from '../user/UserService.js';
 import { AuthenticationError, InternalServerError } from '../../middleware/errorMiddleware.js';
 
 /**
