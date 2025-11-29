@@ -1,11 +1,11 @@
 /**
  * SERVICE: SSOService
- * FILE: SSOService.js
- * MỤC ĐÍCH: Validate SSO tickets với HCMUT SSO portal (UC-01)
+ * PURPOSE: Validate SSO tickets with local CAS server
+ * ARCHITECTURE: Integration layer - calls external CAS API
  * 
- * DEPENDENCIES:
- * - axios
- * - SSOConfig (SSO URLs, service URL)
+ * API VERIFIED: /cas/server/routes/auth.js
+ * - POST /auth/validate { ticket, service }
+ * - Response: { success: true, user: { id, username, email } }
  */
 
 // ============================================================
@@ -83,161 +83,53 @@
 // PSEUDOCODE:
 // - return `${SSO_BASE_URL}/logout`
 
+// Verified with /cas/server/routes/auth.js - POST /auth/validate
 import axios from 'axios';
-import ssoConfig from '../../config/sso.config.js';
-import { AuthenticationError, InternalServerError } from '../../middleware/errorMiddleware.js';
-
-/**
- * SSOService - CAS SSO Integration
- * Integrates with real CAS server
- */
+import { AuthenticationError, InternalServerError } from '../../utils/error.js';
 
 class SSOService {
-  /**
-   * Generate SSO login URL
-   * @returns {string} SSO login URL
-   */
-  static getLoginUrl() {
-    if (!ssoConfig.enabled) {
-      // Mock mode: return mock URL
-      return `${ssoConfig.baseUrl}/login?service=${encodeURIComponent(ssoConfig.serviceUrl)}`;
-    }
-    
-    // Real CAS login URL
-    return `${ssoConfig.loginUrl}?service=${encodeURIComponent(ssoConfig.serviceUrl)}`;
+  constructor() {
+    this.casServerUrl = process.env.CAS_SERVER_URL || 'http://localhost:5000';
+    this.serviceUrl = process.env.APP_URL || 'http://localhost:3000';
   }
 
-  /**
-   * Validate SSO ticket with CAS server
-   * @param {string} ticket - SSO ticket from callback
-   * @param {string} service - Service URL
-   * @returns {Promise<Object>} User info from SSO
-   */
-  static async validateTicket(ticket, service) {
-    if (!ssoConfig.enabled) {
-      // Mock mode: return mock user data based on ticket
-      console.log('[SSO] Mock mode enabled, returning mock data');
-      return this._mockValidateTicket(ticket);
-    }
+  getLoginUrl() {
+    const callbackUrl = `${this.serviceUrl}/api/v1/auth/callback`;
+    return `${this.casServerUrl}/auth/login?service=${encodeURIComponent(callbackUrl)}`;
+  }
 
-    try {
-      console.log('[SSO] Validating ticket with CAS server:', ssoConfig.validateUrl);
-      
-      // Call CAS validation endpoint
-      const response = await axios.get(ssoConfig.validateUrl, {
-        params: { ticket, service },
-        timeout: 10000
-      });
+  // Verified with /cas/server/routes/auth.js (line 61)
+  // POST /auth/validate expects: { ticket, service }
+  // Returns: { success: true, user: { id, username, email } }
+  async validateTicket(ticket) {
+    const callbackUrl = `${this.serviceUrl}/api/v1/auth/callback`;
 
-      if (!response.data || !response.data.success) {
-        throw new AuthenticationError('Invalid SSO ticket');
+    // Call CAS server POST /auth/validate
+    const response = await axios.post(
+      `${this.casServerUrl}/auth/validate`,
+      { ticket, service: callbackUrl },
+      {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 5000
       }
+    );
 
-      // Extract user info from CAS response
-      const userData = response.data.user;
-      
-      return {
-        success: true,
-        email: userData.email,
-        mssv: userData.mssv || null,
-        maCB: userData.maCB || null,
-        fullName: userData.fullName || userData.name,
-        faculty: userData.faculty || userData.department,
-        role: userData.role || 'STUDENT'
-      };
+    const { success, user } = response.data;
 
-    } catch (error) {
-      if (error instanceof AuthenticationError) {
-        throw error;
-      }
-      console.error('[SSO] Validation error:', error.message);
-      throw new InternalServerError(`SSO validation failed: ${error.message}`);
+    if (!success || !user) {
+      throw new AuthenticationError('Invalid SSO ticket');
     }
+
+    return {
+      id: user.id,
+      username: user.username,
+      email: user.email
+    };
   }
 
-  /**
-   * Generate SSO logout URL
-   * @returns {string} SSO logout URL
-   */
-  static getLogoutUrl() {
-    if (!ssoConfig.enabled) {
-      return `${ssoConfig.baseUrl}/logout`;
-    }
-    return `${ssoConfig.logoutUrl}`;
-  }
-
-  /**
-   * Check SSO service health
-   */
-  static async validateConnection() {
-    try {
-      if (!ssoConfig.enabled) {
-        return { status: 'OK', message: 'SSO disabled (mock mode)' };
-      }
-
-      const healthUrl = `${ssoConfig.baseUrl}/health`;
-      const response = await axios.get(healthUrl, { timeout: 3000 });
-
-      return {
-        status: 'OK',
-        message: 'SSO service is reachable',
-        data: response.data
-      };
-    } catch (error) {
-      return {
-        status: 'ERROR',
-        message: 'SSO service unavailable',
-        error: error.message
-      };
-    }
-  }
-
-  /**
-   * MOCK: Validate ticket (for development)
-   * @private
-   * @param {string} ticket - Mock ticket
-   * @returns {Object} Mock user data
-   */
-  static _mockValidateTicket(ticket) {
-    // Mock ticket validation
-    if (!ticket || !ticket.startsWith('ST-')) {
-      throw new AuthenticationError('Invalid ticket format');
-    }
-
-    // Parse ticket to determine user type
-    if (ticket.includes('student')) {
-      return {
-        success: true,
-        email: 'student@hcmut.edu.vn',
-        mssv: '2210001',
-        maCB: null,
-        fullName: 'Nguyen Van A',
-        faculty: 'Computer Science',
-        role: 'STUDENT'
-      };
-    } else if (ticket.includes('tutor') || ticket.includes('lecturer')) {
-      return {
-        success: true,
-        email: 'tutor@hcmut.edu.vn',
-        mssv: null,
-        maCB: 'CB001',
-        fullName: 'Prof. Tran Van B',
-        faculty: 'Computer Science',
-        role: 'TUTOR'
-      };
-    } else {
-      // Default student
-      return {
-        success: true,
-        email: 'user@hcmut.edu.vn',
-        mssv: '2210099',
-        maCB: null,
-        fullName: 'Test User',
-        faculty: 'General',
-        role: 'STUDENT'
-      };
-    }
+  getLogoutUrl() {
+    return `${this.casServerUrl}/auth/logout`;
   }
 }
 
-export default SSOService;
+export default new SSOService();

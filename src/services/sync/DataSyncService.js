@@ -1,120 +1,257 @@
+// REFACTORED: November 29, 2025 - Verified Architecture & Integration
+// BR-007: Auto-sync DATACORE data periodically (cron job)
+// Purpose: Background job to sync user data from DATACORE
+// Architecture: Services import Repositories ONLY
+
+import UserRepository from '../../repositories/UserRepository.js';
+import StudentRepository from '../../repositories/StudentRepository.js';
+import TutorRepository from '../../repositories/TutorRepository.js';
+import DatacoreService from '../integration/DatacoreService.js';
+import { 
+  InternalServerError
+} from '../../utils/error.js';
+
 /**
- * SERVICE: DataSyncService
- * FILE: DataSyncService.js
- * MỤC ĐÍCH: Background job để sync dữ liệu từ DATACORE (scheduled task)
- * 
- * BUSINESS RULES:
- * - BR-007: Sync DATACORE data định kỳ (ví dụ: hàng ngày lúc 2AM)
- * - Chỉ sync Users có lastSyncAt cũ hơn 24 giờ
- * 
- * DEPENDENCIES:
- * - DatacoreService
- * - UserService
- * - node-cron (for scheduling)
+ * Sync all users from DATACORE (BR-007)
+ * Manual trigger or scheduled via cron job
  */
+async function syncAll() {
+  console.log('[DataSyncService] Starting sync all users from DATACORE...');
+  
+  const results = {
+    success: 0,
+    failed: 0,
+    skipped: 0,
+    errors: []
+  };
 
-// ============================================================
-// FUNCTION: syncAllUsers()
-// ============================================================
-// PURPOSE: Sync toàn bộ Users từ DATACORE (manual trigger hoặc cron)
-// 
-// PSEUDOCODE:
-// Step 1: Tìm Users cần sync (lastSyncAt > 24h hoặc null)
-//   - const cutoffTime = new Date(Date.now() - 24 * 60 * 60 * 1000)
-//   - const users = await User.find({
-//       $or: [
-//         { lastSyncAt: { $lt: cutoffTime } },
-//         { lastSyncAt: null }
-//       ]
-//     })
-// 
-// Step 2: Sync từng User
-//   - const results = { success: 0, failed: 0, errors: [] }
-//   
-//   - For each user in users:
-//     → try {
-//         If user.mssv:
-//           const studentData = await DatacoreService.getStudentData(user.mssv)
-//           await UserService.createOrUpdateStudent(user._id, studentData)
-//         
-//         If user.maCB:
-//           const tutorData = await DatacoreService.getTutorData(user.maCB)
-//           await UserService.createOrUpdateTutor(user._id, tutorData)
-//         
-//         user.lastSyncAt = new Date()
-//         await user.save()
-//         
-//         results.success++
-//       }
-//     → catch (error):
-//         results.failed++
-//         results.errors.push({ userId: user._id, error: error.message })
-// 
-// Step 3: Log results
-//   - console.log(`Sync completed: ${results.success} success, ${results.failed} failed`)
-//   - If results.errors.length > 0:
-//     → Log errors to file or monitoring system
-// 
-// OUTPUT:
-// - Return { success: Number, failed: Number, errors: Array }
+  try {
+    // Step 1: Find users that need sync (lastSyncAt > 24h or null)
+    const cutoffTime = new Date(Date.now() - 24 * 60 * 60 * 1000); // 24 hours ago
+    
+    const usersToSync = await UserRepository.findAll({
+      $or: [
+        { lastSyncAt: { $lt: cutoffTime } },
+        { lastSyncAt: null }
+      ],
+      status: 'ACTIVE' // Only sync active users
+    });
 
-// ============================================================
-// FUNCTION: syncSingleUser(userId)
-// ============================================================
-// PURPOSE: Sync 1 User cụ thể (called from login hoặc admin trigger)
-// 
-// PSEUDOCODE:
-// Step 1: Tìm User
-//   - const user = await User.findById(userId)
-//   - If !user → Throw NotFoundError
-// 
-// Step 2: Sync from DATACORE
-//   - If user.mssv:
-//     → const studentData = await DatacoreService.getStudentData(user.mssv)
-//     → await UserService.createOrUpdateStudent(user._id, studentData)
-//   
-//   - If user.maCB:
-//     → const tutorData = await DatacoreService.getTutorData(user.maCB)
-//     → await UserService.createOrUpdateTutor(user._id, tutorData)
-// 
-// Step 3: Update lastSyncAt
-//   - user.lastSyncAt = new Date()
-//   - await user.save()
-// 
-// OUTPUT:
-// - Return { success: true, user }
+    console.log(`[DataSyncService] Found ${usersToSync.length} users to sync`);
 
-// ============================================================
-// FUNCTION: scheduleDailySync()
-// ============================================================
-// PURPOSE: Setup cron job để sync hàng ngày
-// 
-// PSEUDOCODE:
-// Step 1: Setup cron schedule
-//   - const cron = require('node-cron')
-//   
-//   - // Chạy hàng ngày lúc 2AM
-//   - cron.schedule('0 2 * * *', async () => {
-//       console.log('Starting daily DATACORE sync...')
-//       
-//       try {
-//         const results = await syncAllUsers()
-//         console.log('Daily sync completed:', results)
-//       }
-//       catch (error) {
-//         console.error('Daily sync failed:', error)
-//       }
-//     })
-// 
-// NOTE: Call this function once at server startup
+    // Step 2: Sync each user
+    for (const user of usersToSync) {
+      try {
+        // Step 2a: Sync Student data if MSSV exists
+        if (user.mssv) {
+          const studentData = await DatacoreService.getStudentData(user.mssv);
+          
+          if (studentData) {
+            // Find or create Student profile
+            let student = await StudentRepository.findOne({ userId: user._id });
+            
+            if (student) {
+              // Update existing student
+              await StudentRepository.update(student._id, {
+                faculty: studentData.faculty || student.faculty,
+                major: studentData.major || student.major,
+                academicYear: studentData.academicYear || student.academicYear,
+                gpa: studentData.gpa !== undefined ? studentData.gpa : student.gpa
+              });
+            } else {
+              // Create new student profile
+              await StudentRepository.create({
+                userId: user._id,
+                mssv: user.mssv,
+                faculty: studentData.faculty || '',
+                major: studentData.major || '',
+                academicYear: studentData.academicYear || new Date().getFullYear(),
+                gpa: studentData.gpa || 0
+              });
+            }
+          }
+        }
 
-// TODO: Import DatacoreService, UserService
-// TODO: Import User model
-// TODO: Import node-cron
-// TODO: Import error classes (NotFoundError)
+        // Step 2b: Sync Tutor data if maCB exists
+        if (user.maCB) {
+          const tutorData = await DatacoreService.getTutorData(user.maCB);
+          
+          if (tutorData) {
+            // Find or create Tutor profile
+            let tutor = await TutorRepository.findOne({ userId: user._id });
+            
+            if (tutor) {
+              // Update existing tutor
+              await TutorRepository.update(tutor._id, {
+                department: tutorData.department || tutor.department,
+                position: tutorData.position || tutor.position,
+                specializations: tutorData.specializations || tutor.specializations,
+                officeLocation: tutorData.officeLocation || tutor.officeLocation
+              });
+            } else {
+              // Create new tutor profile
+              await TutorRepository.create({
+                userId: user._id,
+                maCB: user.maCB,
+                department: tutorData.department || '',
+                position: tutorData.position || '',
+                specializations: tutorData.specializations || [],
+                officeLocation: tutorData.officeLocation || '',
+                rating: 0,
+                totalRatings: 0
+              });
+            }
+          }
+        }
 
-// TODO: Implement syncAllUsers()
-// TODO: Implement syncSingleUser(userId)
-// TODO: Implement scheduleDailySync() - call at server.js startup
+        // Step 2c: Update user's lastSyncAt timestamp
+        await UserRepository.update(user._id, {
+          lastSyncAt: new Date()
+        });
 
-// TODO: Export all functions
+        results.success++;
+        console.log(`[DataSyncService] ✓ Synced user ${user.email || user.mssv || user.maCB}`);
+
+      } catch (error) {
+        results.failed++;
+        results.errors.push({
+          userId: user._id,
+          email: user.email,
+          error: error.message
+        });
+        console.error(`[DataSyncService] ✗ Failed to sync user ${user._id}:`, error.message);
+      }
+    }
+
+    // Step 3: Return summary
+    console.log('[DataSyncService] Sync completed:', results);
+    return results;
+
+  } catch (error) {
+    console.error('[DataSyncService] Critical error during sync:', error);
+    throw new InternalServerError('Failed to sync users from DATACORE');
+  }
+}
+
+/**
+ * Sync specific user by ID
+ */
+async function syncUser(userId) {
+  console.log(`[DataSyncService] Syncing user ${userId}...`);
+
+  try {
+    // Step 1: Find user
+    const user = await UserRepository.findById(userId);
+    if (!user) {
+      throw new Error('User không tồn tại');
+    }
+
+    // Step 2: Sync Student data if MSSV exists
+    if (user.mssv) {
+      const studentData = await DatacoreService.getStudentData(user.mssv);
+      
+      if (studentData) {
+        let student = await StudentRepository.findOne({ userId: user._id });
+        
+        if (student) {
+          await StudentRepository.update(student._id, {
+            faculty: studentData.faculty || student.faculty,
+            major: studentData.major || student.major,
+            academicYear: studentData.academicYear || student.academicYear,
+            gpa: studentData.gpa !== undefined ? studentData.gpa : student.gpa
+          });
+        } else {
+          await StudentRepository.create({
+            userId: user._id,
+            mssv: user.mssv,
+            faculty: studentData.faculty || '',
+            major: studentData.major || '',
+            academicYear: studentData.academicYear || new Date().getFullYear(),
+            gpa: studentData.gpa || 0
+          });
+        }
+      }
+    }
+
+    // Step 3: Sync Tutor data if maCB exists
+    if (user.maCB) {
+      const tutorData = await DatacoreService.getTutorData(user.maCB);
+      
+      if (tutorData) {
+        let tutor = await TutorRepository.findOne({ userId: user._id });
+        
+        if (tutor) {
+          await TutorRepository.update(tutor._id, {
+            department: tutorData.department || tutor.department,
+            position: tutorData.position || tutor.position,
+            specializations: tutorData.specializations || tutor.specializations,
+            officeLocation: tutorData.officeLocation || tutor.officeLocation
+          });
+        } else {
+          await TutorRepository.create({
+            userId: user._id,
+            maCB: user.maCB,
+            department: tutorData.department || '',
+            position: tutorData.position || '',
+            specializations: tutorData.specializations || [],
+            officeLocation: tutorData.officeLocation || '',
+            rating: 0,
+            totalRatings: 0
+          });
+        }
+      }
+    }
+
+    // Step 4: Update lastSyncAt
+    await UserRepository.update(user._id, {
+      lastSyncAt: new Date()
+    });
+
+    console.log(`[DataSyncService] ✓ User ${userId} synced successfully`);
+    return { success: true };
+
+  } catch (error) {
+    console.error(`[DataSyncService] ✗ Failed to sync user ${userId}:`, error.message);
+    throw error;
+  }
+}
+
+/**
+ * Get sync statistics
+ */
+async function getSyncStats() {
+  try {
+    // Count users by sync status
+    const cutoffTime = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    
+    const allUsers = await UserRepository.findAll({ status: 'ACTIVE' });
+    const recentlySynced = await UserRepository.findAll({
+      lastSyncAt: { $gte: cutoffTime },
+      status: 'ACTIVE'
+    });
+    const needsSync = await UserRepository.findAll({
+      $or: [
+        { lastSyncAt: { $lt: cutoffTime } },
+        { lastSyncAt: null }
+      ],
+      status: 'ACTIVE'
+    });
+
+    return {
+      totalUsers: allUsers.length,
+      recentlySynced: recentlySynced.length,
+      needsSync: needsSync.length,
+      lastSyncCheck: new Date()
+    };
+
+  } catch (error) {
+    console.error('[DataSyncService] Failed to get sync stats:', error);
+    throw new InternalServerError('Failed to get sync statistics');
+  }
+}
+
+export {
+  syncAll,
+  syncUser,
+  getSyncStats
+};

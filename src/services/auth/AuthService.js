@@ -170,11 +170,14 @@
 //   token: "JWT string"
 // }
 
+// REFACTORED: November 29, 2025 - Verified Architecture & Integration
+// Verified with: SSOService, DatacoreService, UserRepository pattern
+
 import jwt from 'jsonwebtoken';
 import SSOService from '../integration/SSOService.js';
 import DatacoreService from '../integration/DatacoreService.js';
 import * as UserService from '../user/UserService.js';
-import { AuthenticationError, InternalServerError } from '../../middleware/errorMiddleware.js';
+import { AuthenticationError, InternalServerError } from '../../utils/error.js';
 
 /**
  * Validate SSO ticket từ HCMUT SSO portal

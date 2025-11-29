@@ -155,52 +155,17 @@
 //   }
 // }
 
-// Custom Error Classes
-class AppError extends Error {
-  constructor(message, statusCode) {
-    super(message);
-    this.statusCode = statusCode;
-    this.name = this.constructor.name;
-    Error.captureStackTrace(this, this.constructor);
-  }
-}
-
-class AuthenticationError extends AppError {
-  constructor(message = 'Authentication failed') {
-    super(message, 401);
-  }
-}
-
-class AuthorizationError extends AppError {
-  constructor(message = 'Insufficient permissions') {
-    super(message, 403);
-  }
-}
-
-class NotFoundError extends AppError {
-  constructor(message = 'Resource not found') {
-    super(message, 404);
-  }
-}
-
-class ValidationError extends AppError {
-  constructor(message = 'Validation failed', errors = null) {
-    super(message, 400);
-    this.errors = errors;
-  }
-}
-
-class ConflictError extends AppError {
-  constructor(message = 'Resource conflict') {
-    super(message, 409);
-  }
-}
-
-class InternalServerError extends AppError {
-  constructor(message = 'Internal server error') {
-    super(message, 500);
-  }
-}
+// Import Custom Error Classes from utils layer (Clean Architecture)
+import {
+  AppError,
+  BadRequestError,
+  AuthenticationError,
+  AuthorizationError,
+  NotFoundError,
+  ValidationError,
+  ConflictError,
+  InternalServerError
+} from '../utils/error.js';
 
 // Error Handler Middleware
 const errorHandler = (err, req, res, next) => {

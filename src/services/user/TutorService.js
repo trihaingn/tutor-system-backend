@@ -153,9 +153,13 @@
 // OUTPUT:
 // - Return { averageRating, totalReviews }
 
-import Tutor from '../../models/Tutor.model.js';
-import { NotFoundError, ValidationError } from '../../middleware/errorMiddleware.js';
+// REFACTORED: November 29, 2025 - Verified Architecture & Integration
+// Architecture: Services import Repositories ONLY
+// Verified with: /backend/src/repositories/index.js
+
 import TutorRepository from '../../repositories/TutorRepository.js';
+import UserRepository from '../../repositories/UserRepository.js';
+import { NotFoundError, ValidationError } from '../../utils/error.js';
 
 /**
  * Student search Tutors theo subject (UC-07)
@@ -183,18 +187,33 @@ async function searchTutors(searchCriteria) {
 
   const page = searchCriteria.page || 1;
   const limit = searchCriteria.limit || 20;
-  const skip = (page - 1) * limit;
+  const options = {
+    skip: (page - 1) * limit,
+    limit: limit,
+    sort: { averageRating: -1, totalReviews: -1 }
+  };
 
-  const tutors = await Tutor.find(query)
-    .populate('userId', 'fullName email faculty')
-    .sort({ averageRating: -1, totalReviews: -1 })
-    .skip(skip)
-    .limit(limit);
+  const tutors = await TutorRepository.findAll(query, options);
+  const total = await TutorRepository.count(query);
 
-  const total = await Tutor.countDocuments(query);
+  // Manually populate userId for each tutor
+  const populatedTutors = await Promise.all(
+    tutors.map(async (tutor) => {
+      const user = await UserRepository.findById(tutor.userId);
+      return {
+        ...tutor.toObject(),
+        userId: user ? {
+          _id: user._id,
+          fullName: user.fullName,
+          email: user.email,
+          faculty: user.faculty
+        } : null
+      };
+    })
+  );
 
   return {
-    data: tutors,
+    data: populatedTutors,
     pagination: {
       currentPage: page,
       totalPages: Math.ceil(total / limit),
@@ -208,16 +227,23 @@ async function searchTutors(searchCriteria) {
  * Lấy chi tiết Tutor profile (public view)
  */
 async function getTutorDetails(tutorId) {
-  const tutor = await Tutor.findById(tutorId)
-    .populate('userId', 'fullName email faculty');
+  const tutor = await TutorRepository.findById(tutorId);
   
   if (!tutor) {
     throw new NotFoundError('Tutor không tồn tại');
   }
 
+  // Manually populate userId
+  const user = await UserRepository.findById(tutor.userId);
+
   return {
     tutorId: tutor._id,
-    user: tutor.userId,
+    user: user ? {
+      _id: user._id,
+      fullName: user.fullName,
+      email: user.email,
+      faculty: user.faculty
+    } : null,
     maCB: tutor.maCB,
     type: tutor.type,
     expertise: tutor.expertise,

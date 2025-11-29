@@ -1,136 +1,190 @@
+// REFACTORED: November 29, 2025 - Verified Architecture & Integration
+// UC-21: Create session record/report
+// BR: Only COMPLETED/CONFIRMED sessions can have reports
+// BR: One session can only have one report (unique sessionId)
+// Architecture: Services import Repositories ONLY
+
+import RecordRepository from '../../repositories/RecordRepository.js';
+import TutorSessionRepository from '../../repositories/TutorSessionRepository.js';
+import { 
+  ValidationError, 
+  ConflictError, 
+  NotFoundError,
+  AuthorizationError
+} from '../../utils/error.js';
+
 /**
- * SERVICE: RecordService
- * FILE: RecordService.js
- * MỤC ĐÍCH: Xử lý logic tạo session reports/record (UC-18)
- * 
- * BUSINESS RULES:
- * - Chỉ tạo report được khi session COMPLETED
- * - 1 session chỉ có 1 report (unique sessionId)
- * - Chỉ Tutor owner mới được tạo/update report
- * 
- * DEPENDENCIES:
- * - Record Model, TutorSession Model
+ * Create session record/report (UC-21)
+ * Tutor creates a report for a completed session
  */
+async function createSessionRecord(tutorId, sessionId, recordData) {
+  // Step 1: Validate session exists
+  const session = await TutorSessionRepository.findById(sessionId);
+  if (!session) {
+    throw new NotFoundError('Session không tồn tại');
+  }
 
-// ============================================================
-// FUNCTION: createSessionReport(reportData)
-// ============================================================
-// PURPOSE: Tutor tạo session report (UC-18)
-// 
-// INPUT:
-// - reportData: Object {
-//     sessionId: ObjectId,
-//     tutorId: ObjectId,
-//     summary: String,
-//     topicsCovered: Array<String>,
-//     studentProgress: Array<Object>,
-//     nextSteps: Array<String>,
-//     attachments: Array<Object>
-//   }
-// 
-// PSEUDOCODE:
-// Step 1: Validate session exists và status
-//   - const session = await TutorSession.findById(reportData.sessionId)
-//   - If !session → Throw NotFoundError("Session không tồn tại")
-//   - If session.status !== 'COMPLETED':
-//     → Throw ForbiddenError("Chỉ có thể tạo report cho session COMPLETED")
-// 
-// Step 2: Validate ownership
-//   - If session.tutorId.toString() !== reportData.tutorId.toString():
-//     → Throw ForbiddenError("Bạn không phải chủ session này")
-// 
-// Step 3: Kiểm tra duplicate report (unique sessionId)
-//   - const existingReport = await Record.findOne({ sessionId: reportData.sessionId })
-//   - If existingReport:
-//     → Throw ConflictError("Session này đã có report rồi")
-// 
-// Step 4: Tạo record record
-//   - const record = await Record.create({
-//       sessionId: reportData.sessionId,
-//       tutorId: reportData.tutorId,
-//       summary: reportData.summary,
-//       topicsCovered: reportData.topicsCovered,
-//       studentProgress: reportData.studentProgress,
-//       nextSteps: reportData.nextSteps,
-//       attachments: reportData.attachments || []
-//     })
-// 
-// Step 5: Update session hasReport flag
-//   - await TutorSession.findByIdAndUpdate(
-//       reportData.sessionId,
-//       { hasReport: true }
-//     )
-// 
-// Step 6: (Optional) Gửi notification cho participants
-//   - For each participantId in session.participants:
-//     → NotificationService.sendNotification({
-//         recipientId: participantId,
-//         type: 'SYSTEM_ANNOUNCEMENT',
-//         title: 'Báo cáo buổi học đã sẵn sàng',
-//         message: 'Tutor đã đăng báo cáo cho buổi học'
-//       })
-// 
-// OUTPUT:
-// - Return Record object
+  // Step 2: Validate ownership
+  if (session.tutorId.toString() !== tutorId.toString()) {
+    throw new AuthorizationError('Bạn không phải chủ session này');
+  }
 
-// ============================================================
-// FUNCTION: getSessionReport(sessionId, userId, userRole)
-// ============================================================
-// PURPOSE: Lấy session report (có access control)
-// 
-// INPUT:
-// - sessionId: ObjectId
-// - userId: ObjectId
-// - userRole: String (STUDENT, TUTOR, ADMIN)
-// 
-// PSEUDOCODE:
-// Step 1: Tìm session
-//   - const session = await TutorSession.findById(sessionId)
-//   - If !session → Throw NotFoundError
-// 
-// Step 2: Validate access (AuthorizationService logic)
-//   - If userRole === 'ADMIN' → Allow
-//   - If userRole === 'TUTOR' AND session.tutorId === userId → Allow
-//   - If userRole === 'STUDENT':
-//     → Check if userId in session.participants
-//     → If not → Throw ForbiddenError("Bạn không tham gia session này")
-// 
-// Step 3: Tìm report
-//   - const report = await Record.findOne({ sessionId: sessionId })
-//       .populate('tutorId', 'userId fullName')
-//       .populate('studentProgress.studentId', 'userId fullName')
-//   - If !report → Throw NotFoundError("Session chưa có report")
-// 
-// OUTPUT:
-// - Return Record object
+  // Step 3: BR - Validate session status (must be COMPLETED or CONFIRMED)
+  if (session.status !== 'COMPLETED' && session.status !== 'CONFIRMED') {
+    throw new ValidationError('Chỉ có thể tạo report cho session COMPLETED hoặc CONFIRMED');
+  }
 
-// ============================================================
-// FUNCTION: updateSessionReport(recordId, tutorId, updateData)
-// ============================================================
-// PURPOSE: Tutor update report
-// 
-// PSEUDOCODE:
-// Step 1: Tìm record
-//   - const record = await Record.findById(recordId)
-//   - If !record → Throw NotFoundError
-// 
-// Step 2: Validate ownership
-//   - If record.tutorId.toString() !== tutorId.toString():
-//     → Throw ForbiddenError
-// 
-// Step 3: Apply updates
-//   - Object.assign(record, updateData)
-//   - await record.save()
-// 
-// OUTPUT:
-// - Return updated Record
+  // Step 4: BR - Check for duplicate report (unique sessionId)
+  const existingRecord = await RecordRepository.findOne({ sessionId: sessionId });
+  if (existingRecord) {
+    throw new ConflictError('Session này đã có report rồi');
+  }
 
-// TODO: Import Record, TutorSession models
-// TODO: Import NotificationService
-// TODO: Import error classes
+  // Step 5: Validate required fields
+  if (!recordData.summary || recordData.summary.trim() === '') {
+    throw new ValidationError('Summary là bắt buộc');
+  }
 
-// TODO: Implement createSessionReport(reportData)
-// TODO: Implement getSessionReport(sessionId, userId, userRole)
-// TODO: Implement updateSessionReport(recordId, tutorId, updateData)
+  // Step 6: Create record
+  const record = await RecordRepository.create({
+    sessionId: sessionId,
+    tutorId: tutorId,
+    summary: recordData.summary,
+    topicsCovered: recordData.topicsCovered || [],
+    studentProgress: recordData.studentProgress || [],
+    nextSteps: recordData.nextSteps || [],
+    attachments: recordData.attachments || [],
+    createdAt: new Date()
+  });
 
-// TODO: Export all functions
+  // Step 7: Update session hasReport flag
+  await TutorSessionRepository.update(sessionId, {
+    hasReport: true
+  });
+
+  // Step 8: BR-008 - Notify participants (placeholder)
+  // for (const participantId of session.participants) {
+  //   await NotificationService.create({
+  //     userId: participantId,
+  //     type: 'SESSION_REPORT_CREATED',
+  //     title: 'Biên bản buổi học đã sẵn sàng',
+  //     message: `Tutor đã tạo biên bản cho buổi học: ${session.title}`
+  //   });
+  // }
+
+  return record;
+}
+
+/**
+ * Get record by session ID
+ */
+async function getRecordBySession(sessionId) {
+  const record = await RecordRepository.findOne({ sessionId: sessionId });
+  if (!record) {
+    throw new NotFoundError('Record không tồn tại cho session này');
+  }
+
+  return record;
+}
+
+/**
+ * Update session record
+ */
+async function updateSessionRecord(tutorId, recordId, updateData) {
+  // Step 1: Find record
+  const record = await RecordRepository.findById(recordId);
+  if (!record) {
+    throw new NotFoundError('Record không tồn tại');
+  }
+
+  // Step 2: Validate ownership
+  if (record.tutorId.toString() !== tutorId.toString()) {
+    throw new AuthorizationError('Bạn không phải chủ record này');
+  }
+
+  // Step 3: Validate session still allows updates
+  const session = await TutorSessionRepository.findById(record.sessionId);
+  if (!session) {
+    throw new NotFoundError('Session không tồn tại');
+  }
+
+  if (session.status === 'CANCELLED') {
+    throw new ValidationError('Không thể update report của session đã cancelled');
+  }
+
+  // Step 4: Apply updates
+  const allowedFields = ['summary', 'topicsCovered', 'studentProgress', 'nextSteps', 'attachments'];
+  const updates = {};
+
+  for (const field of allowedFields) {
+    if (updateData[field] !== undefined) {
+      updates[field] = updateData[field];
+    }
+  }
+
+  if (Object.keys(updates).length === 0) {
+    throw new ValidationError('Không có dữ liệu để update');
+  }
+
+  updates.updatedAt = new Date();
+
+  const updatedRecord = await RecordRepository.update(recordId, updates);
+  return updatedRecord;
+}
+
+/**
+ * Delete session record (soft delete)
+ */
+async function deleteSessionRecord(tutorId, recordId) {
+  // Step 1: Find record
+  const record = await RecordRepository.findById(recordId);
+  if (!record) {
+    throw new NotFoundError('Record không tồn tại');
+  }
+
+  // Step 2: Validate ownership
+  if (record.tutorId.toString() !== tutorId.toString()) {
+    throw new AuthorizationError('Bạn không phải chủ record này');
+  }
+
+  // Step 3: Delete record
+  await RecordRepository.delete(recordId);
+
+  // Step 4: Update session hasReport flag
+  await TutorSessionRepository.update(record.sessionId, {
+    hasReport: false
+  });
+
+  return { success: true };
+}
+
+/**
+ * Get all records by tutor
+ */
+async function getRecordsByTutor(tutorId, filters = {}) {
+  const query = { tutorId: tutorId };
+
+  if (filters.startDate || filters.endDate) {
+    query.createdAt = {};
+    if (filters.startDate) {
+      query.createdAt.$gte = filters.startDate;
+    }
+    if (filters.endDate) {
+      query.createdAt.$lte = filters.endDate;
+    }
+  }
+
+  const records = await RecordRepository.findAll(query, {
+    sort: { createdAt: -1 }
+  });
+
+  return records;
+}
+
+export {
+  createSessionRecord,
+  getRecordBySession,
+  updateSessionRecord,
+  deleteSessionRecord,
+  getRecordsByTutor
+};

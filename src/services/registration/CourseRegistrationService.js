@@ -254,16 +254,21 @@
 // OUTPUT:
 // - Return { success: true, registration }
 
-import CourseRegistration from '../../models/CourseRegistration.model.js';
-import Student from '../../models/Student.model.js';
-import Tutor from '../../models/Tutor.model.js';
+// REFACTORED: November 29, 2025 - Verified Architecture & Integration
+// BR-005: INSTANT APPROVAL - Registration confirmed immediately
+// BR-006: No duplicate registration for same (student, tutor, subject)
+// Architecture: Services import Repositories ONLY
+
 import CourseRegistrationRepository from '../../repositories/CourseRegistrationRepository.js';
+import StudentRepository from '../../repositories/StudentRepository.js';
+import TutorRepository from '../../repositories/TutorRepository.js';
+import UserRepository from '../../repositories/UserRepository.js';
 import { 
   ValidationError, 
   ConflictError, 
   NotFoundError, 
   AuthorizationError 
-} from '../../middleware/errorMiddleware.js';
+} from '../../utils/error.js';
 
 /**
  * Validate registration data
@@ -274,48 +279,54 @@ async function validateRegistrationData(studentId, tutorId, subjectId) {
   }
 
   // Validate Student exists and active
-  const student = await Student.findById(studentId).populate('userId');
+  const student = await StudentRepository.findById(studentId);
   if (!student) {
     throw new NotFoundError('Student không tồn tại');
   }
-  if (student.userId.status !== 'ACTIVE') {
+  
+  const studentUser = await UserRepository.findById(student.userId);
+  if (!studentUser || studentUser.status !== 'ACTIVE') {
     throw new AuthorizationError('Tài khoản Student không hoạt động');
   }
 
   // Validate Tutor exists and active
-  const tutor = await Tutor.findById(tutorId).populate('userId');
+  const tutor = await TutorRepository.findById(tutorId);
   if (!tutor) {
     throw new NotFoundError('Tutor không tồn tại');
   }
-  if (tutor.userId.status !== 'ACTIVE') {
+  
+  const tutorUser = await UserRepository.findById(tutor.userId);
+  if (!tutorUser || tutorUser.status !== 'ACTIVE') {
     throw new AuthorizationError('Tài khoản Tutor không hoạt động');
   }
 
-  // Validate Tutor has expertise in this subject
-  const hasExpertise = tutor.expertise.some(exp => exp.subjectId === subjectId);
+  // BR: Validate Tutor has expertise in this subject
+  const hasExpertise = tutor.expertise && tutor.expertise.some(exp => exp.subjectId === subjectId);
   if (!hasExpertise) {
     throw new ValidationError('Tutor không dạy môn học này');
   }
 
-  // Validate Tutor is accepting students
+  // BR: Validate Tutor is accepting students
   if (tutor.isAcceptingStudents === false) {
     throw new AuthorizationError('Tutor hiện không nhận học sinh mới');
   }
 
-  return { student, tutor };
+  return { student, tutor, studentUser, tutorUser };
 }
 
 /**
  * Check duplicate registration (BR-006)
  */
 async function checkDuplicateRegistration(studentId, tutorId, subjectId) {
-  const isDuplicate = await CourseRegistrationRepository.checkDuplicate(
+  // BR-006: No duplicates for same (student, tutor, subject)
+  const existingRegistration = await CourseRegistrationRepository.findOne({
     studentId,
     tutorId,
-    subjectId
-  );
+    subjectId,
+    status: { $in: ['ACTIVE', 'PENDING'] }
+  });
 
-  return isDuplicate;
+  return existingRegistration !== null;
 }
 
 /**
@@ -326,7 +337,7 @@ async function checkDuplicateRegistration(studentId, tutorId, subjectId) {
  */
 async function registerCourse(studentId, tutorId, subjectId) {
   // Step 1: Validate data
-  const { student, tutor } = await validateRegistrationData(studentId, tutorId, subjectId);
+  const { student, tutor, studentUser, tutorUser } = await validateRegistrationData(studentId, tutorId, subjectId);
 
   // Step 2: BR-006 - Check duplicate
   const isDuplicate = await checkDuplicateRegistration(studentId, tutorId, subjectId);
@@ -335,7 +346,7 @@ async function registerCourse(studentId, tutorId, subjectId) {
   }
 
   // Step 3: BR-005 - INSTANT APPROVAL (Version 2.0)
-  const registration = await CourseRegistration.create({
+  const registration = await CourseRegistrationRepository.create({
     studentId,
     tutorId,
     subjectId,
@@ -346,28 +357,30 @@ async function registerCourse(studentId, tutorId, subjectId) {
   });
 
   // Step 4: Update Student statistics
-  await Student.findByIdAndUpdate(
-    studentId,
-    { $inc: { registeredTutors: 1 } }
-  );
+  await StudentRepository.update(student._id, {
+    registeredTutors: (student.registeredTutors || 0) + 1
+  });
 
   // Step 5: Update Tutor statistics
-  await Tutor.findByIdAndUpdate(
-    tutorId,
-    { $inc: { totalStudents: 1 } }
-  );
+  await TutorRepository.update(tutor._id, {
+    totalStudents: (tutor.totalStudents || 0) + 1
+  });
 
   // Step 6: BR-008 - Send notification to Tutor
-  // Note: NotificationService would be called here in full implementation
-  // await NotificationService.sendNotification({...})
+  // Note: NotificationService.sendNotification() would be called here
+  // await NotificationService.sendNotification({
+  //   recipientId: tutorUser._id,
+  //   type: 'APPOINTMENT_CREATED',
+  //   title: 'Học sinh mới đăng ký',
+  //   message: `Học sinh ${studentUser.fullName} (${student.mssv}) đã đăng ký môn ${subjectId}`
+  // });
 
-  // Step 7: Populate and return
-  await registration.populate([
-    { path: 'studentId', populate: { path: 'userId' } },
-    { path: 'tutorId', populate: { path: 'userId' } }
-  ]);
-
-  return registration;
+  // Step 7: Return with populated data
+  return {
+    ...registration.toObject(),
+    student: { ...student.toObject(), userId: studentUser },
+    tutor: { ...tutor.toObject(), userId: tutorUser }
+  };
 }
 
 /**
@@ -384,14 +397,26 @@ async function getStudentRegistrations(studentId, filters = {}) {
     query.subjectId = filters.subjectId;
   }
 
-  const registrations = await CourseRegistration.find(query)
-    .populate({
-      path: 'tutorId',
-      populate: { path: 'userId', select: 'fullName email' }
-    })
-    .sort({ registeredAt: -1 });
+  const registrations = await CourseRegistrationRepository.findAll(query, {
+    sort: { registeredAt: -1 }
+  });
 
-  return registrations;
+  // Manual populate tutorId
+  const populated = await Promise.all(
+    registrations.map(async (reg) => {
+      const tutor = await TutorRepository.findById(reg.tutorId);
+      const tutorUser = tutor ? await UserRepository.findById(tutor.userId) : null;
+      return {
+        ...reg.toObject(),
+        tutor: tutor ? {
+          ...tutor.toObject(),
+          userId: tutorUser ? { _id: tutorUser._id, fullName: tutorUser.fullName, email: tutorUser.email } : null
+        } : null
+      };
+    })
+  );
+
+  return populated;
 }
 
 /**
@@ -410,21 +435,33 @@ async function getTutorRegistrations(tutorId, filters = {}) {
     query.subjectId = filters.subjectId;
   }
 
-  const registrations = await CourseRegistration.find(query)
-    .populate({
-      path: 'studentId',
-      populate: { path: 'userId', select: 'fullName email' }
-    })
-    .sort({ registeredAt: -1 });
+  const registrations = await CourseRegistrationRepository.findAll(query, {
+    sort: { registeredAt: -1 }
+  });
 
-  return registrations;
+  // Manual populate studentId
+  const populated = await Promise.all(
+    registrations.map(async (reg) => {
+      const student = await StudentRepository.findById(reg.studentId);
+      const studentUser = student ? await UserRepository.findById(student.userId) : null;
+      return {
+        ...reg.toObject(),
+        student: student ? {
+          ...student.toObject(),
+          userId: studentUser ? { _id: studentUser._id, fullName: studentUser.fullName, email: studentUser.email } : null
+        } : null
+      };
+    })
+  );
+
+  return populated;
 }
 
 /**
  * Cancel registration
  */
 async function cancelRegistration(registrationId, studentId) {
-  const registration = await CourseRegistration.findById(registrationId);
+  const registration = await CourseRegistrationRepository.findById(registrationId);
 
   if (!registration) {
     throw new NotFoundError('Registration không tồn tại');
@@ -441,21 +478,26 @@ async function cancelRegistration(registrationId, studentId) {
   }
 
   // Update status
-  registration.status = 'CANCELLED';
-  await registration.save();
+  const updatedRegistration = await CourseRegistrationRepository.update(registrationId, {
+    status: 'CANCELLED'
+  });
 
   // Update statistics
-  await Student.findByIdAndUpdate(
-    studentId,
-    { $inc: { registeredTutors: -1 } }
-  );
+  const student = await StudentRepository.findById(studentId);
+  if (student) {
+    await StudentRepository.update(studentId, {
+      registeredTutors: Math.max(0, (student.registeredTutors || 0) - 1)
+    });
+  }
 
-  await Tutor.findByIdAndUpdate(
-    registration.tutorId,
-    { $inc: { totalStudents: -1 } }
-  );
+  const tutor = await TutorRepository.findById(registration.tutorId);
+  if (tutor) {
+    await TutorRepository.update(registration.tutorId, {
+      totalStudents: Math.max(0, (tutor.totalStudents || 0) - 1)
+    });
+  }
 
-  return { success: true, registration };
+  return { success: true, registration: updatedRegistration };
 }
 
 export {

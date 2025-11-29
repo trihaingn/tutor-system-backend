@@ -113,24 +113,36 @@
 // OUTPUT:
 // - Return { success: true }
 
-import Student from '../../models/Student.model.js';
-import { NotFoundError } from '../../middleware/errorMiddleware.js';
+// REFACTORED: November 29, 2025 - Verified Architecture & Integration
+// Architecture: Services import Repositories ONLY
+// Verified with: /backend/src/repositories/index.js
+
 import StudentRepository from '../../repositories/StudentRepository.js';
+import UserRepository from '../../repositories/UserRepository.js';
+import { NotFoundError } from '../../utils/error.js';
 
 /**
  * Lấy full profile của Student (UC-06)
  */
 async function getStudentProfile(studentId) {
-  const student = await Student.findById(studentId)
-    .populate('userId', 'email fullName faculty status');
+  const student = await StudentRepository.findById(studentId);
   
   if (!student) {
     throw new NotFoundError('Student không tồn tại');
   }
 
+  // Manually populate userId
+  const user = await UserRepository.findById(student.userId);
+
   return {
     studentId: student._id,
-    user: student.userId,
+    user: user ? {
+      _id: user._id,
+      email: user.email,
+      fullName: user.fullName,
+      faculty: user.faculty,
+      status: user.status
+    } : null,
     mssv: student.mssv,
     major: student.major,
     enrollmentYear: student.enrollmentYear,

@@ -141,25 +141,31 @@
 // OUTPUT:
 // - Return User object (populated)
 
-import User from '../../models/User.model.js';
-import Student from '../../models/Student.model.js';
-import Tutor from '../../models/Tutor.model.js';
-import { NotFoundError } from '../../middleware/errorMiddleware.js';
+// REFACTORED: November 29, 2025 - Verified Architecture & Integration
+// Architecture: Services import Repositories ONLY (not Models directly)
+// Verified with: /backend/src/repositories/index.js
+
+import UserRepository from '../../repositories/UserRepository.js';
+import StudentRepository from '../../repositories/StudentRepository.js';
+import TutorRepository from '../../repositories/TutorRepository.js';
+import { NotFoundError } from '../../utils/error.js';
 
 /**
  * Tạo hoặc update User record
  */
 async function createOrUpdateUser(userData) {
-  let user = await User.findOne({ email: userData.email });
+  let user = await UserRepository.findOne({ email: userData.email });
 
   if (user) {
     // Update existing user
-    Object.assign(user, userData);
-    user.lastSyncAt = new Date();
-    await user.save();
+    const updateData = {
+      ...userData,
+      lastSyncAt: new Date()
+    };
+    user = await UserRepository.update(user._id, updateData);
   } else {
     // Create new user
-    user = await User.create({
+    user = await UserRepository.create({
       ...userData,
       lastSyncAt: new Date(),
       syncSource: 'DATACORE'
@@ -173,15 +179,14 @@ async function createOrUpdateUser(userData) {
  * Tạo hoặc update Student profile
  */
 async function createOrUpdateStudent(userId, studentData) {
-  let student = await Student.findOne({ userId });
+  let student = await StudentRepository.findOne({ userId });
 
   if (student) {
     // Update existing student
-    Object.assign(student, studentData);
-    await student.save();
+    student = await StudentRepository.update(student._id, studentData);
   } else {
     // Create new student with default statistics
-    student = await Student.create({
+    student = await StudentRepository.create({
       userId,
       ...studentData,
       registeredTutors: 0,
@@ -200,15 +205,14 @@ async function createOrUpdateStudent(userId, studentData) {
  * Tạo hoặc update Tutor profile
  */
 async function createOrUpdateTutor(userId, tutorData) {
-  let tutor = await Tutor.findOne({ userId });
+  let tutor = await TutorRepository.findOne({ userId });
 
   if (tutor) {
     // Update existing tutor
-    Object.assign(tutor, tutorData);
-    await tutor.save();
+    tutor = await TutorRepository.update(tutor._id, tutorData);
   } else {
     // Create new tutor with default statistics
-    tutor = await Tutor.create({
+    tutor = await TutorRepository.create({
       userId,
       ...tutorData,
       totalStudents: 0,
@@ -227,7 +231,7 @@ async function createOrUpdateTutor(userId, tutorData) {
  * Lấy User với populated Student/Tutor
  */
 async function getUserById(userId) {
-  const user = await User.findById(userId);
+  const user = await UserRepository.findById(userId);
   
   if (!user) {
     throw new NotFoundError('User không tồn tại');
@@ -235,9 +239,11 @@ async function getUserById(userId) {
 
   // Populate based on role
   if (user.role === 'STUDENT') {
-    await user.populate('student');
+    const student = await StudentRepository.findOne({ userId: user._id });
+    user.student = student;
   } else if (user.role === 'TUTOR' || user.role === 'ADMIN') {
-    await user.populate('tutor');
+    const tutor = await TutorRepository.findOne({ userId: user._id });
+    user.tutor = tutor;
   }
 
   return user;

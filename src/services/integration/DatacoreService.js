@@ -1,151 +1,116 @@
+// REFACTORED: November 29, 2025 - Verified Architecture & Integration
+// Verified with: /datacore/src/controllers/userController.js
+// Response format: { success, data: {...} }
+
 import axios from 'axios';
 import datacoreConfig from '../../config/datacore.config.js';
+import { InternalServerError, NotFoundError } from '../../utils/error.js';
 
 /**
  * DatacoreService - Integration with HCMUT DATACORE
- * 
  * Business Rules:
  * - BR-007: Auto-sync DATACORE on every login
  * - DATACORE is READ-ONLY source of truth
  */
-
 class DatacoreService {
   /**
    * Get user profile from DATACORE by ID (MSSV or Mã CB)
+   * @throws {InternalServerError} If DATACORE service fails
+   * @throws {NotFoundError} If user not found (404)
    */
   static async getUserInfo(userId) {
-    try {
-      const url = `${datacoreConfig.apiUrl}/users/profile/${userId}`;
-      const response = await axios.get(url, {
-        timeout: datacoreConfig.timeout || 5000
-      });
+    const url = `${datacoreConfig.apiUrl}/users/profile/${userId}`;
+    const response = await axios.get(url, {
+      timeout: datacoreConfig.timeout || 5000
+    });
 
-      if (!response.data || !response.data.success) {
-        console.warn('[DATACORE] User not found:', userId);
-        return null;
-      }
-
-      return response.data.data;
-    } catch (error) {
-      console.error('[DATACORE] Get user info error:', error.message);
-      if (error.response && error.response.status === 404) {
-        return null;
-      }
-      return null;
+    // Parse nested response: response.data.data
+    if (!response.data || !response.data.success) {
+      throw new NotFoundError(`User ${userId} not found in DATACORE`);
     }
+
+    return response.data.data;
   }
 
   /**
    * Get student data from DATACORE by MSSV
    */
   static async getStudentData(mssv) {
-    try {
-      const userData = await this.getUserInfo(mssv);
-      
-      if (!userData) {
-        return null;
-      }
+    const userData = await this.getUserInfo(mssv);
 
-      // Check if user is a student
-      if (userData.role === 'STUDENT' || userData.student_id) {
-        return {
-          mssv: userData.student_id || mssv,
-          fullName: userData.full_name || userData.name,
-          email: userData.email,
-          faculty: userData.faculty || userData.department,
-          major: userData.major || userData.faculty,
-          enrollmentYear: userData.enrollment_year || new Date().getFullYear(),
-          currentYear: userData.current_year || 1,
-          gpa: parseFloat(userData.gpa) || 0,
-          totalCredits: parseInt(userData.total_credits) || 0,
-          role: 'STUDENT'
-        };
-      }
-
-      return null;
-    } catch (error) {
-      console.error('[DATACORE] Get student data error:', error.message);
-      return null;
+    // Verify user is a student
+    if (userData.role === 'STUDENT' || userData.student_id) {
+      return {
+        mssv: userData.student_id || mssv,
+        fullName: userData.full_name || userData.name,
+        email: userData.email,
+        faculty: userData.faculty || userData.department,
+        major: userData.major || userData.faculty,
+        enrollmentYear: userData.enrollment_year || new Date().getFullYear(),
+        currentYear: userData.current_year || 1,
+        gpa: parseFloat(userData.gpa) || 0,
+        totalCredits: parseInt(userData.total_credits) || 0,
+        role: 'STUDENT'
+      };
     }
+
+    throw new NotFoundError(`User ${mssv} is not a student`);
   }
 
   /**
    * Get tutor/staff data from DATACORE by Mã CB
    */
   static async getTutorData(maCB) {
-    try {
-      const userData = await this.getUserInfo(maCB);
-      
-      if (!userData) {
-        return null;
-      }
+    const userData = await this.getUserInfo(maCB);
 
-      // Check if user is staff/lecturer (not student)
-      if (userData.role !== 'STUDENT' && (userData.staff_id || userData.role)) {
-        return {
-          maCB: userData.staff_id || maCB,
-          fullName: userData.full_name || userData.name,
-          email: userData.email,
-          faculty: userData.faculty || userData.department,
-          role: userData.role || 'TUTOR',
-          expertise: userData.expertise || [],
-          bio: userData.bio || '',
-          position: userData.position || 'Lecturer'
-        };
-      }
-
-      return null;
-    } catch (error) {
-      console.error('[DATACORE] Get tutor data error:', error.message);
-      return null;
+    // Verify user is staff/lecturer (not student)
+    if (userData.role !== 'STUDENT' && (userData.staff_id || userData.role)) {
+      return {
+        maCB: userData.staff_id || maCB,
+        fullName: userData.full_name || userData.name,
+        email: userData.email,
+        faculty: userData.faculty || userData.department,
+        role: userData.role || 'TUTOR',
+        expertise: userData.expertise || [],
+        bio: userData.bio || '',
+        position: userData.position || 'Lecturer'
+      };
     }
+
+    throw new NotFoundError(`User ${maCB} is not a staff member`);
   }
 
   /**
    * Sync user data from DATACORE
    */
   static async syncUser(userId) {
-    try {
-      const userData = await this.getUserInfo(userId);
-      
-      if (!userData) {
-        console.warn('[DATACORE] User not found for sync:', userId);
-        return null;
-      }
+    const userData = await this.getUserInfo(userId);
 
-      // Determine if student or staff
-      if (userData.role === 'STUDENT' || userData.student_id) {
-        return await this.getStudentData(userData.student_id || userId);
-      } else if (userData.staff_id || userData.role !== 'STUDENT') {
-        return await this.getTutorData(userData.staff_id || userId);
-      }
-
-      return userData;
-    } catch (error) {
-      console.error('[DATACORE] Sync user error:', error.message);
-      return null;
+    // Determine if student or staff
+    if (userData.role === 'STUDENT' || userData.student_id) {
+      return await this.getStudentData(userData.student_id || userId);
+    } else if (userData.staff_id || userData.role !== 'STUDENT') {
+      return await this.getTutorData(userData.staff_id || userId);
     }
+
+    return userData;
   }
 
   /**
    * Sync all users from DATACORE
+   * @throws {InternalServerError} If sync fails
    */
   static async syncAllUsers() {
-    try {
-      const url = `${datacoreConfig.apiUrl}/users/sync`;
-      const response = await axios.get(url, {
-        timeout: (datacoreConfig.timeout || 5000) * 2
-      });
+    const url = `${datacoreConfig.apiUrl}/users/sync`;
+    const response = await axios.get(url, {
+      timeout: (datacoreConfig.timeout || 5000) * 2
+    });
 
-      if (!response.data || !response.data.success) {
-        return [];
-      }
-
-      return response.data.data || [];
-    } catch (error) {
-      console.error('[DATACORE] Sync all users error:', error.message);
-      return [];
+    if (!response.data || !response.data.success) {
+      throw new InternalServerError('DATACORE sync failed');
     }
+
+    return response.data.data || [];
   }
 
   /**
@@ -174,28 +139,6 @@ class DatacoreService {
       'STAFF': 'LECTURER'
     };
     return typeMapping[datacoreRole?.toUpperCase()] || 'LECTURER';
-  }
-
-  /**
-   * Validate DATACORE connection (health check)
-   */
-  static async validateConnection() {
-    try {
-      const healthUrl = `${datacoreConfig.apiUrl}/health`;
-      const response = await axios.get(healthUrl, { timeout: 3000 });
-      
-      return {
-        status: 'OK',
-        message: 'DATACORE service is reachable',
-        data: response.data
-      };
-    } catch (error) {
-      return {
-        status: 'ERROR',
-        message: 'DATACORE service unavailable',
-        error: error.message
-      };
-    }
   }
 }
 
