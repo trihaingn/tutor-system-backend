@@ -11,10 +11,6 @@
  * - DELETE /:id           - Cancel registration
  */
 
-// TODO: Import express.Router
-// TODO: Import registrationController
-// TODO: Import authMiddleware, roleMiddleware
-
 // ============================================================
 // ROUTE: POST /api/v1/registrations
 // ============================================================

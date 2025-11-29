@@ -12,8 +12,10 @@
  * - GET    /unread-count   - Get unread count
  */
 
-// TODO: Import express.Router, notificationController
-// TODO: Import authMiddleware
+import express from 'express';
+const router = express.Router();
+import * as notificationController from '../controllers/notification.controller.js';
+import { authMiddleware } from '../middleware/authMiddleware.js';
 
 // ============================================================
 // ROUTE: GET /api/v1/notifications
@@ -80,4 +82,36 @@
 //   notificationController.getUnreadCount
 // )
 
-// TODO: Initialize router, define routes, export
+// ============================================================
+// ROUTES IMPLEMENTATION
+// ============================================================
+
+// GET /api/v1/notifications/unread-count - Get unread count (must be before /:id)
+router.get(
+  '/unread-count',
+  authMiddleware,
+  notificationController.getUnreadCount
+);
+
+// GET /api/v1/notifications - Get all notifications (UC-20)
+router.get(
+  '/',
+  authMiddleware,
+  notificationController.getNotifications
+);
+
+// PUT /api/v1/notifications/read-all - Mark all as read
+router.put(
+  '/read-all',
+  authMiddleware,
+  notificationController.markAllAsRead
+);
+
+// PUT /api/v1/notifications/:id/read - Mark as read (UC-20)
+router.put(
+  '/:id/read',
+  authMiddleware,
+  notificationController.markAsRead
+);
+
+export default router;

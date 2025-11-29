@@ -13,8 +13,11 @@
  * - GET /me/evaluations    - Get my evaluations (UC-22)
  */
 
-// TODO: Import express.Router, tutorController
-// TODO: Import authMiddleware, roleMiddleware
+import express from 'express';
+const router = express.Router();
+import * as tutorController from '../controllers/tutor.controller.js';
+import { authMiddleware } from '../middleware/authMiddleware.js';
+import { roleMiddleware } from '../middleware/roleMiddleware.js';
 
 // ============================================================
 // ROUTE: GET /api/v1/tutors/search
@@ -97,19 +100,50 @@
 //   tutorController.getMyFeedbacks
 // )
 
-import express from 'express';
-const router = express.Router();
-import * as tutorController from '../controllers/tutor.controller.js';
-import { authMiddleware } from '../middleware/authMiddleware.js';
+// ============================================================
+// ROUTES IMPLEMENTATION
+// ============================================================
 
-// GET /api/v1/tutors/search - Search tutors
+// GET /api/v1/tutors/search - Search tutors (UC-06)
 router.get(
   '/search',
   authMiddleware,
   tutorController.searchTutors
 );
 
-// GET /api/v1/tutors/:id - Get tutor details
+// GET /api/v1/tutors/me - Get my tutor profile
+router.get(
+  '/me',
+  authMiddleware,
+  roleMiddleware(['TUTOR', 'ADMIN']),
+  tutorController.getMyProfile
+);
+
+// GET /api/v1/tutors/me/sessions - Get my sessions
+router.get(
+  '/me/sessions',
+  authMiddleware,
+  roleMiddleware(['TUTOR', 'ADMIN']),
+  tutorController.getMySessions
+);
+
+// GET /api/v1/tutors/me/evaluations - Get my evaluations
+router.get(
+  '/me/evaluations',
+  authMiddleware,
+  roleMiddleware(['TUTOR', 'ADMIN']),
+  tutorController.getMyEvaluations
+);
+
+// GET /api/v1/tutors/:tutorId/availability - Get tutor availability (public)
+router.get(
+  '/:tutorId/availability',
+  authMiddleware,
+  tutorController.getTutorAvailability
+);
+
+// GET /api/v1/tutors/:id - Get tutor details (UC-06)
+// Note: This must be LAST to avoid conflicting with /search, /me routes
 router.get(
   '/:id',
   authMiddleware,
