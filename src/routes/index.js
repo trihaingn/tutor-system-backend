@@ -108,7 +108,7 @@ import sessionRoutes from './session.routes.js';
 import scheduleRoutes from './schedule.routes.js';
 import notificationRoutes from './notification.routes.js';
 import recordRoutes from './record.routes.js';
-import evaluationRoutes from './feedback-rating.routes.js';
+import feedbackRoutes from './feedback-rating.routes.js';
 
 // Mount sub-routes
 router.use('/auth', authRoutes);
@@ -119,7 +119,7 @@ router.use('/sessions', sessionRoutes);
 router.use('/schedules', scheduleRoutes);
 router.use('/notifications', notificationRoutes);
 router.use('/records', recordRoutes);
-router.use('/evaluations', evaluationRoutes);
+router.use('/evaluations', feedbackRoutes);
 
 // Health check endpoint
 router.get('/health', (req, res) => {
