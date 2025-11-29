@@ -33,18 +33,6 @@ class RecordRepository extends BaseRepository {
       }
     );
   }
-
-  async updataRecordSummary(sessionId, tutorId, summary)    {
-    return await this.updateOne(
-        { 
-            sessionId: sessionId, 
-            tutorId: tutorId
-        }, 
-        { 
-            summary : summary
-        }
-    )
-  }
 }
 
 export default new RecordRepository();
