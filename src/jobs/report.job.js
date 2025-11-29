@@ -15,7 +15,7 @@
 // const { logger } = require('../utils/logger')
 // const SessionRepository = require('../repositories/SessionRepository')
 // const ScheduleRepository = require('../repositories/ScheduleRepository')
-// const FeedbackRepository = require('../repositories/FeedbackRepository')
+// const RecordRepository = require('../repositories/RecordRepository')
 
 // ============================================================
 // DAILY REPORT JOB
@@ -153,15 +153,15 @@
 //     ])
 //     
 //     // STEP 4: Average rating
-//     const feedbacks = await FeedbackRepository.findAll({
+//     const records = await RecordRepository.findAll({
 //       createdAt: { $gte: startOfWeek, $lte: endOfWeek }
 //     })
 //     
 //     let totalRating = 0
-//     feedbacks.forEach(fb => {
+//     records.forEach(fb => {
 //       totalRating += fb.qualityRating
 //     })
-//     const avgRating = feedbacks.length > 0 ? totalRating / feedbacks.length : 0
+//     const avgRating = records.length > 0 ? totalRating / records.length : 0
 //     
 //     // STEP 5: Create report
 //     const report = {
@@ -233,7 +233,7 @@
 //     ])
 //     
 //     // STEP 4: Rating distribution
-//     const feedbacks = await FeedbackRepository.findAll({
+//     const records = await RecordRepository.findAll({
 //       createdAt: { $gte: startOfMonth, $lte: endOfMonth }
 //     })
 //     
@@ -245,7 +245,7 @@
 //       1: 0
 //     }
 //     
-//     feedbacks.forEach(fb => {
+//     records.forEach(fb => {
 //       ratingDistribution[fb.qualityRating]++
 //     })
 //     

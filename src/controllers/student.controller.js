@@ -6,7 +6,7 @@
  * USE CASES:
  * - UC-06: Student views own profile
  * - UC-28: Student views own appointment history
- * - UC-29: Student views own evaluation history
+ * - UC-29: Student views own feedback history
  * 
  * DEPENDENCIES:
  * - StudentService: Handle student-related queries
@@ -68,7 +68,7 @@
 // PROCESS:
 // 1. Extract studentId from JWT
 // 2. Query Appointment model (filter by status if provided)
-// 3. Populate sessionId → ConsultationSession info
+// 3. Populate sessionId → TutorSession info
 // 4. Return with pagination
 // 
 // RESPONSE:
@@ -104,7 +104,7 @@
 // 
 // PROCESS:
 // 1. Extract studentId from JWT
-// 2. Query StudentEvaluation model
+// 2. Query StudentFeedback model
 // 3. Populate tutorId, sessionId
 // 4. Return with pagination
 // 
@@ -113,7 +113,7 @@
 //   "success": true,
 //   "data": [
 //     {
-//       "evaluationId": "...",
+//       "feedbackId": "...",
 //       "tutor": {
 //         "fullName": "Prof. A"
 //       },

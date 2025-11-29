@@ -5,7 +5,7 @@
  * 
  * DEPENDENCIES:
  * - Tutor Model, User Model
- * - ConsultationSession Model, StudentEvaluation Model
+ * - TutorSession Model, StudentFeedback Model
  */
 
 // ============================================================
@@ -113,7 +113,7 @@
 //     → If filters.endDate: query.startTime.$lte = filters.endDate
 // 
 // Step 2: Query với pagination
-//   - const sessions = await ConsultationSession.find(query)
+//   - const sessions = await TutorSession.find(query)
 //       .sort({ startTime: -1 })
 //       .skip(skip)
 //       .limit(limit)
@@ -122,12 +122,12 @@
 // - Return { data: sessions, pagination: {...} }
 
 // ============================================================
-// FUNCTION: getTutorEvaluations(tutorId, filters)
+// FUNCTION: getTutorFeedbacks(tutorId, filters)
 // ============================================================
 // PURPOSE: Lấy evaluations Tutor nhận được (UC-22)
 // 
 // PSEUDOCODE:
-// Step 1-2: Query StudentEvaluation where tutorId = tutorId
+// Step 1-2: Query StudentFeedback where tutorId = tutorId
 //   - Populate studentId (nếu isAnonymous = false)
 //   - Populate sessionId
 //   - Sort by evaluatedAt DESC
@@ -136,11 +136,11 @@
 // ============================================================
 // FUNCTION: updateTutorRating(tutorId)
 // ============================================================
-// PURPOSE: Recalculate Tutor average rating (called when new evaluation added)
+// PURPOSE: Recalculate Tutor average rating (called when new feedback added)
 // 
 // PSEUDOCODE:
 // Step 1: Aggregate all evaluations
-//   - const evaluations = await StudentEvaluation.find({ tutorId: tutorId })
+//   - const evaluations = await StudentFeedback.find({ tutorId: tutorId })
 //   - const totalRating = evaluations.reduce((sum, eval) => sum + eval.rating, 0)
 //   - const averageRating = totalRating / evaluations.length
 // 
@@ -234,7 +234,7 @@ async function getTutorDetails(tutorId) {
 }
 
 /**
- * Update Tutor rating (called when new evaluation added)
+ * Update Tutor rating (called when new feedback added)
  */
 async function updateTutorRating(tutorId, newRating, totalReviews) {
   await TutorRepository.updateRating(tutorId, newRating, totalReviews);

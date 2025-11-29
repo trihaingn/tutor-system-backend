@@ -8,7 +8,7 @@
  * ENDPOINTS:
  * - GET /me                - Get my profile (UC-06)
  * - GET /me/appointments   - Get my appointment history (UC-28)
- * - GET /me/evaluations    - Get my evaluation history (UC-29)
+ * - GET /me/feedbacks    - Get my feedback history (UC-29)
  */
 
 // TODO: Import express.Router, studentController
@@ -56,7 +56,7 @@
 //   '/me/evaluations',
 //   authMiddleware,
 //   roleMiddleware(['STUDENT']),
-//   studentController.getMyEvaluations
+//   studentController.getMyFeedbacks
 // )
 
 import express from 'express';

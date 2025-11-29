@@ -9,7 +9,7 @@
  * - BR-008: Tự động gửi notification
  * 
  * DEPENDENCIES:
- * - ConsultationSession Model, Appointment Model, CourseRegistration Model
+ * - TutorSession Model, Appointment Model, CourseRegistration Model
  * - NotificationService
  */
 
@@ -25,7 +25,7 @@
 // 
 // PSEUDOCODE:
 // Step 1: Validate session exists và status
-//   - const session = await ConsultationSession.findById(sessionId).populate('tutorId')
+//   - const session = await TutorSession.findById(sessionId).populate('tutorId')
 //   - If !session → Throw NotFoundError("Session không tồn tại")
 //   - If session.status !== 'SCHEDULED':
 //     → Throw ForbiddenError("Session không trong trạng thái SCHEDULED")
@@ -62,8 +62,8 @@
 //       notes: notes || ''
 //     })
 // 
-// Step 6: Update session participants
-//   - await ConsultationSession.findByIdAndUpdate(
+// Step 4: Update session participants
+//   - await TutorSession.findByIdAndUpdate(
 //       sessionId,
 //       {
 //         $inc: { currentParticipants: 1 },
@@ -138,7 +138,7 @@
 //   - await appointment.save()
 // 
 // Step 5: Update session participants (giảm)
-//   - await ConsultationSession.findByIdAndUpdate(
+//   - await TutorSession.findByIdAndUpdate(
 //       appointment.sessionId,
 //       {
 //         $inc: { currentParticipants: -1 },
@@ -157,7 +157,7 @@
 // OUTPUT:
 // - Return updated appointment
 
-// TODO: Import models (Appointment, ConsultationSession, CourseRegistration, Student)
+// TODO: Import models (Appointment, TutorSession, CourseRegistration, Student)
 // TODO: Import NotificationService
 // TODO: Import error classes
 

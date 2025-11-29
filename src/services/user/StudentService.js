@@ -5,7 +5,7 @@
  * 
  * DEPENDENCIES:
  * - Student Model, User Model
- * - Appointment Model, StudentEvaluation Model
+ * - Appointment Model, StudentFeedback Model
  */
 
 // ============================================================
@@ -86,13 +86,13 @@
 //   }
 
 // ============================================================
-// FUNCTION: getStudentEvaluationHistory(studentId, filters)
+// FUNCTION: getStudentFeedbackHistory(studentId, filters)
 // ============================================================
 // PURPOSE: Lấy lịch sử evaluations Student đã cho (UC-29)
 // 
 // PSEUDOCODE:
 // Step 1-4: Tương tự getStudentAppointmentHistory
-//   - Query StudentEvaluation where studentId = studentId
+//   - Query StudentFeedback where studentId = studentId
 //   - Populate tutorId, sessionId
 //   - Sort by evaluatedAt DESC
 //   - Return với pagination

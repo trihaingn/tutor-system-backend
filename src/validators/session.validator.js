@@ -1,7 +1,7 @@
 /**
  * VALIDATOR: Session Validation Schemas
  * FILE: session.validator.js
- * MỤC ĐÍCH: Validation schemas cho ConsultationSession endpoints
+ * MỤC ĐÍCH: Validation schemas cho TutorSession endpoints
  * 
  * BUSINESS RULES:
  * - BR-001: Giờ bắt đầu/kết thúc phải là giờ tròn (HH:00)

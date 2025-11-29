@@ -23,7 +23,7 @@
 //     title: String,
 //     message: String,
 //     relatedId?: ObjectId,
-//     relatedType?: 'Session' | 'Appointment' | 'Evaluation'
+//     relatedType?: 'Session' | 'Appointment' | 'Feedback'
 //   }
 // 
 // PSEUDOCODE:

@@ -14,8 +14,8 @@
  * - /students       -> student.routes.js
  * - /tutors         -> tutor.routes.js
  * - /notifications  -> notification.routes.js
- * - /feedback       -> feedback.routes.js
- * - /evaluations    -> evaluation.routes.js
+ * - /record       -> record.routes.js
+ * - /evaluations    -> feedback-rating.routes.js
  */
 
 // TODO: Import express.Router
@@ -27,8 +27,8 @@
 // const studentRoutes = require('./student.routes')
 // const tutorRoutes = require('./tutor.routes')
 // const notificationRoutes = require('./notification.routes')
-// const feedbackRoutes = require('./feedback.routes')
-// const evaluationRoutes = require('./evaluation.routes')
+// const recordRoutes = require('./record.routes')
+// const evaluationRoutes = require('./feedback-rating.routes')
 
 // ============================================================
 // ROUTER SETUP
@@ -46,8 +46,8 @@
 // router.use('/students', studentRoutes)
 // router.use('/tutors', tutorRoutes)
 // router.use('/notifications', notificationRoutes)
-// router.use('/feedback', feedbackRoutes)
-// router.use('/evaluations', evaluationRoutes)
+// router.use('/record', recordRoutes)
+// router.use('/feedbacks', evaluationRoutes)
 
 // ============================================================
 // HEALTH CHECK ENDPOINT

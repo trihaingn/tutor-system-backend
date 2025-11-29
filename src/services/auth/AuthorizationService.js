@@ -97,7 +97,7 @@
 // 
 // INPUT:
 // - user: Object { userId, role }
-// - session: Object (ConsultationSession)
+// - session: Object (TutorSession)
 // 
 // PROCESS:
 // 1. If role === ADMIN → Return true
@@ -116,7 +116,7 @@
 // 
 // INPUT:
 // - user: Object { userId, role }
-// - session: Object (ConsultationSession)
+// - session: Object (TutorSession)
 // 
 // PROCESS:
 // 1. If role === ADMIN → Return true

@@ -1,25 +1,25 @@
 /**
- * ROUTES: Feedback Routes
- * FILE: feedback.routes.js
- * MỤC ĐÍCH: Định nghĩa API endpoints cho Session Feedback/Reports
+ * ROUTES: Record Routes
+ * FILE: record.routes.js
+ * MỤC ĐÍCH: Định nghĩa API endpoints cho Session Record/Reports
  * 
- * BASE PATH: /api/v1/feedback
+ * BASE PATH: /api/v1/record
  * 
  * ENDPOINTS:
  * - POST   /sessions/:sessionId  - Tutor creates report (UC-18)
  * - GET    /sessions/:sessionId  - Get session report
- * - PUT    /:feedbackId          - Update report
+ * - PUT    /:recordId          - Update report
  */
 
-// TODO: Import express.Router, feedbackController
+// TODO: Import express.Router, recordController
 // TODO: Import authMiddleware, roleMiddleware
 
 // ============================================================
-// ROUTE: POST /api/v1/feedback/sessions/:sessionId
+// ROUTE: POST /api/v1/record/sessions/:sessionId
 // ============================================================
 // PURPOSE: Tutor tạo session report (UC-18)
 // ACCESS: Protected - TUTOR or ADMIN only
-// CONTROLLER: feedbackController.createSessionReport
+// CONTROLLER: recordController.createSessionReport
 // 
 // REQUEST BODY:
 // {
@@ -38,15 +38,15 @@
 //   '/sessions/:sessionId',
 //   authMiddleware,
 //   roleMiddleware(['TUTOR', 'ADMIN']),
-//   feedbackController.createSessionReport
+//   recordController.createSessionReport
 // )
 
 // ============================================================
-// ROUTE: GET /api/v1/feedback/sessions/:sessionId
+// ROUTE: GET /api/v1/record/sessions/:sessionId
 // ============================================================
 // PURPOSE: Xem session report
 // ACCESS: Protected - TUTOR (owner) or participating STUDENTS or ADMIN
-// CONTROLLER: feedbackController.getSessionReport
+// CONTROLLER: recordController.getSessionReport
 // 
 // ACCESS CONTROL:
 // - ADMIN: Always allowed
@@ -57,25 +57,25 @@
 // router.get(
 //   '/sessions/:sessionId',
 //   authMiddleware,
-//   feedbackController.getSessionReport
+//   recordController.getSessionReport
 // )
 
 // ============================================================
-// ROUTE: PUT /api/v1/feedback/:feedbackId
+// ROUTE: PUT /api/v1/record/:recordId
 // ============================================================
 // PURPOSE: Tutor update session report
 // ACCESS: Protected - TUTOR (owner) or ADMIN
-// CONTROLLER: feedbackController.updateSessionReport
+// CONTROLLER: recordController.updateSessionReport
 // 
 // VALIDATION:
-// - Check feedback.tutorId === userId or ADMIN
+// - Check record.tutorId === userId or ADMIN
 // 
 // PSEUDOCODE:
 // router.put(
-//   '/:feedbackId',
+//   '/:recordId',
 //   authMiddleware,
 //   roleMiddleware(['TUTOR', 'ADMIN']),
-//   feedbackController.updateSessionReport
+//   recordController.updateSessionReport
 // )
 
 // TODO: Initialize router, define routes, export

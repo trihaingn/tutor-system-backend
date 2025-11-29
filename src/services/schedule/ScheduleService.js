@@ -11,7 +11,7 @@
  * - BR-008: Tự động gửi notification khi tạo session
  * 
  * DEPENDENCIES:
- * - ConsultationSession Model
+ * - TutorSession Model
  * - Availability Model
  * - NotificationService
  * - ValidationError, ConflictError
@@ -161,8 +161,8 @@
 //     ]
 //   }
 // 
-// Step 2: Query ConsultationSession model
-//   - const conflictingSessions = await ConsultationSession.find(query)
+// Step 2: Query TutorSession model
+//   - const conflictingSessions = await TutorSession.find(query)
 // 
 // Step 3: Return kết quả
 //   - If conflictingSessions.length > 0:
@@ -225,7 +225,7 @@
 // 
 // Step 6: Tạo session record
 //   - Calculate duration = (endTime - startTime) / 60000 (minutes)
-//   - const newSession = await ConsultationSession.create({
+//   - const newSession = await TutorSession.create({
 //       tutorId: sessionData.tutorId,
 //       title: sessionData.title,
 //       subjectId: sessionData.subjectId,
@@ -265,7 +265,7 @@
 //   - Return newSession
 // 
 // OUTPUT:
-// - Return ConsultationSession object (populated)
+// - Return TutorSession object (populated)
 
 // ============================================================
 // FUNCTION: updateSession(sessionId, updateData)
@@ -278,7 +278,7 @@
 // 
 // PSEUDOCODE:
 // Step 1: Tìm session
-//   - const session = await ConsultationSession.findById(sessionId)
+//   - const session = await TutorSession.findById(sessionId)
 //   - If !session → Throw NotFoundError("Session không tồn tại")
 // 
 // Step 2: Kiểm tra status (chỉ update được SCHEDULED sessions)
@@ -328,7 +328,7 @@
 // 
 // PSEUDOCODE:
 // Step 1: Tìm session
-//   - const session = await ConsultationSession.findById(sessionId)
+//   - const session = await TutorSession.findById(sessionId)
 //   - If !session → Throw NotFoundError("Session không tồn tại")
 // 
 // Step 2: Validate ownership
@@ -363,7 +363,7 @@
 // OUTPUT:
 // - Return { success: true, session: updatedSession }
 
-// TODO: Import models (ConsultationSession, Availability, Tutor, CourseRegistration, Appointment)
+// TODO: Import models (TutorSession, Availability, Tutor, CourseRegistration, Appointment)
 // TODO: Import NotificationService
 // TODO: Import error classes (ValidationError, ConflictError, NotFoundError, ForbiddenError)
 

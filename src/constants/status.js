@@ -15,7 +15,7 @@
  *    - INACTIVE: Không hoạt động
  *    - CANCELLED: Đã hủy
  * 
- * 3. SESSION STATUS (ConsultationSession):
+ * 3. SESSION STATUS (TutorSession):
  *    - SCHEDULED: Đã lên lịch (chưa bắt đầu)
  *    - IN_PROGRESS: Đang diễn ra
  *    - COMPLETED: Đã hoàn thành

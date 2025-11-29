@@ -1,7 +1,7 @@
 /**
- * SERVICE: FeedbackService
- * FILE: FeedbackService.js
- * MỤC ĐÍCH: Xử lý logic tạo session reports/feedback (UC-18)
+ * SERVICE: RecordService
+ * FILE: RecordService.js
+ * MỤC ĐÍCH: Xử lý logic tạo session reports/record (UC-18)
  * 
  * BUSINESS RULES:
  * - Chỉ tạo report được khi session COMPLETED
@@ -9,7 +9,7 @@
  * - Chỉ Tutor owner mới được tạo/update report
  * 
  * DEPENDENCIES:
- * - Feedback Model, ConsultationSession Model
+ * - Record Model, TutorSession Model
  */
 
 // ============================================================
@@ -30,7 +30,7 @@
 // 
 // PSEUDOCODE:
 // Step 1: Validate session exists và status
-//   - const session = await ConsultationSession.findById(reportData.sessionId)
+//   - const session = await TutorSession.findById(reportData.sessionId)
 //   - If !session → Throw NotFoundError("Session không tồn tại")
 //   - If session.status !== 'COMPLETED':
 //     → Throw ForbiddenError("Chỉ có thể tạo report cho session COMPLETED")
@@ -40,12 +40,12 @@
 //     → Throw ForbiddenError("Bạn không phải chủ session này")
 // 
 // Step 3: Kiểm tra duplicate report (unique sessionId)
-//   - const existingReport = await Feedback.findOne({ sessionId: reportData.sessionId })
+//   - const existingReport = await Record.findOne({ sessionId: reportData.sessionId })
 //   - If existingReport:
 //     → Throw ConflictError("Session này đã có report rồi")
 // 
-// Step 4: Tạo feedback record
-//   - const feedback = await Feedback.create({
+// Step 4: Tạo record record
+//   - const record = await Record.create({
 //       sessionId: reportData.sessionId,
 //       tutorId: reportData.tutorId,
 //       summary: reportData.summary,
@@ -56,7 +56,7 @@
 //     })
 // 
 // Step 5: Update session hasReport flag
-//   - await ConsultationSession.findByIdAndUpdate(
+//   - await TutorSession.findByIdAndUpdate(
 //       reportData.sessionId,
 //       { hasReport: true }
 //     )
@@ -71,7 +71,7 @@
 //       })
 // 
 // OUTPUT:
-// - Return Feedback object
+// - Return Record object
 
 // ============================================================
 // FUNCTION: getSessionReport(sessionId, userId, userRole)
@@ -85,7 +85,7 @@
 // 
 // PSEUDOCODE:
 // Step 1: Tìm session
-//   - const session = await ConsultationSession.findById(sessionId)
+//   - const session = await TutorSession.findById(sessionId)
 //   - If !session → Throw NotFoundError
 // 
 // Step 2: Validate access (AuthorizationService logic)
@@ -96,41 +96,41 @@
 //     → If not → Throw ForbiddenError("Bạn không tham gia session này")
 // 
 // Step 3: Tìm report
-//   - const report = await Feedback.findOne({ sessionId: sessionId })
+//   - const report = await Record.findOne({ sessionId: sessionId })
 //       .populate('tutorId', 'userId fullName')
 //       .populate('studentProgress.studentId', 'userId fullName')
 //   - If !report → Throw NotFoundError("Session chưa có report")
 // 
 // OUTPUT:
-// - Return Feedback object
+// - Return Record object
 
 // ============================================================
-// FUNCTION: updateSessionReport(feedbackId, tutorId, updateData)
+// FUNCTION: updateSessionReport(recordId, tutorId, updateData)
 // ============================================================
 // PURPOSE: Tutor update report
 // 
 // PSEUDOCODE:
-// Step 1: Tìm feedback
-//   - const feedback = await Feedback.findById(feedbackId)
-//   - If !feedback → Throw NotFoundError
+// Step 1: Tìm record
+//   - const record = await Record.findById(recordId)
+//   - If !record → Throw NotFoundError
 // 
 // Step 2: Validate ownership
-//   - If feedback.tutorId.toString() !== tutorId.toString():
+//   - If record.tutorId.toString() !== tutorId.toString():
 //     → Throw ForbiddenError
 // 
 // Step 3: Apply updates
-//   - Object.assign(feedback, updateData)
-//   - await feedback.save()
+//   - Object.assign(record, updateData)
+//   - await record.save()
 // 
 // OUTPUT:
-// - Return updated Feedback
+// - Return updated Record
 
-// TODO: Import Feedback, ConsultationSession models
+// TODO: Import Record, TutorSession models
 // TODO: Import NotificationService
 // TODO: Import error classes
 
 // TODO: Implement createSessionReport(reportData)
 // TODO: Implement getSessionReport(sessionId, userId, userRole)
-// TODO: Implement updateSessionReport(feedbackId, tutorId, updateData)
+// TODO: Implement updateSessionReport(recordId, tutorId, updateData)
 
 // TODO: Export all functions

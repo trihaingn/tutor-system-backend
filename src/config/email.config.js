@@ -49,7 +49,7 @@
 //     appointmentRejected: 'appointment-rejected',
 //     sessionCancelled: 'session-cancelled',
 //     newRegistration: 'new-registration',
-//     evaluationReceived: 'evaluation-received'
+//     evaluationReceived: 'feedback-received'
 //   },
 //   
 //   // Feature Flag

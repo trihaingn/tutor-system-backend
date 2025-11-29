@@ -1,19 +1,19 @@
 /**
- * CONTROLLER: EvaluationController
- * FILE: evaluation.controller.js
- * MỤC ĐÍCH: Xử lý HTTP requests liên quan đến Evaluations (UC-26, UC-27)
+ * CONTROLLER: Feedback Rating Controller
+ * FILE: feedback-rating.controller.js
+ * MỤC ĐÍCH: Xử lý HTTP requests liên quan đến Feedbacks (UC-26, UC-27)
  * 
  * USE CASES:
  * - UC-26: Student evaluates Tutor after session
  * - UC-27: Tutor evaluates Student after session
  * 
  * DEPENDENCIES:
- * - EvaluationService: Handle evaluation creation and validation
+ * - FeedbackService: Handle feedback creation and validation
  * - ValidationError, NotFoundError, ForbiddenError, ConflictError
  */
 
 // ============================================================
-// FUNCTION: createStudentEvaluation()
+// FUNCTION: createStudentFeedback()
 // ============================================================
 // METHOD: POST /api/v1/evaluations/student
 // PURPOSE: Student đánh giá Tutor sau buổi học (UC-26)
@@ -39,20 +39,20 @@
 // 
 // PROCESS:
 // 1. Extract studentId from JWT
-// 2. Call EvaluationService.createStudentEvaluation()
+// 2. Call FeedbackService.createStudentFeedback()
 //    - Validate session status = COMPLETED (BR-009)
 //    - Validate rating is integer 1-5 (BR-010)
 //    - Check appointment exists
-//    - Check no duplicate evaluation (composite unique)
-//    - Create StudentEvaluation record
+//    - Check no duplicate feedback (composite unique)
+//    - Create StudentFeedback record
 //    - AUTO SIDE EFFECT: Update Tutor.stats.averageRating
-// 3. Return evaluation data
+// 3. Return feedback data
 // 
 // RESPONSE:
 // {
 //   "success": true,
 //   "data": {
-//     "evaluationId": "...",
+//     "feedbackId": "...",
 //     "studentId": "...",
 //     "tutorId": "...",
 //     "sessionId": "...",
@@ -69,7 +69,7 @@
 // - No appointment → 403 ForbiddenError ("You did not attend this session")
 
 // ============================================================
-// FUNCTION: createTutorEvaluation()
+// FUNCTION: createTutorFeedback()
 // ============================================================
 // METHOD: POST /api/v1/evaluations/tutor
 // PURPOSE: Tutor đánh giá Student sau buổi học (UC-27)
@@ -95,19 +95,19 @@
 // 
 // PROCESS:
 // 1. Extract tutorId from JWT
-// 2. Call EvaluationService.createTutorEvaluation()
+// 2. Call FeedbackService.createTutorFeedback()
 //    - Validate session status = COMPLETED
 //    - Validate progressScore is integer 1-5
 //    - Validate session ownership (session.tutorId === tutorId)
-//    - Check no duplicate evaluation
-//    - Create TutorEvaluation record
-// 3. Return evaluation data
+//    - Check no duplicate feedback
+//    - Create TutorFeedback record
+// 3. Return feedback data
 // 
 // RESPONSE:
 // {
 //   "success": true,
 //   "data": {
-//     "evaluationId": "...",
+//     "feedbackId": "...",
 //     "tutorId": "...",
 //     "studentId": "...",
 //     "sessionId": "...",
@@ -136,22 +136,22 @@
 // 
 // PROCESS:
 // 1. Validate user has access (session.tutorId === userId or role=ADMIN)
-// 2. Query StudentEvaluation + TutorEvaluation (filter by sessionId)
-// 3. Populate student/tutor info (respect isAnonymous for StudentEvaluation)
+// 2. Query StudentFeedback + TutorFeedback (filter by sessionId)
+// 3. Populate student/tutor info (respect isAnonymous for StudentFeedback)
 // 4. Return both lists
 // 
 // RESPONSE:
 // {
 //   "success": true,
 //   "data": {
-//     "studentEvaluations": [
+//     "studentFeedbacks": [
 //       {
 //         "rating": 5,
 //         "comment": "Very helpful!",
 //         "student": {...} // Hidden if isAnonymous=true
 //       }
 //     ],
-//     "tutorEvaluations": [
+//     "tutorFeedbacks": [
 //       {
 //         "progressScore": 4,
 //         "effortLevel": "HIGH",
@@ -161,23 +161,23 @@
 //   }
 // }
 
-// TODO: Import dependencies (EvaluationService, error classes)
+// TODO: Import dependencies (FeedbackService, error classes)
 
-// TODO: Implement createStudentEvaluation() - POST /api/v1/evaluations/student
+// TODO: Implement createStudentFeedback() - POST /api/v1/evaluations/student
 // - Validate BR-009 (COMPLETED session)
 // - Validate BR-010 (integer 1-5 rating)
 // - Check attendance
 // - Call service layer
 // - Trigger Tutor.stats update
 
-// TODO: Implement createTutorEvaluation() - POST /api/v1/evaluations/tutor
+// TODO: Implement createTutorFeedback() - POST /api/v1/evaluations/tutor
 // - Validate session ownership
 // - Validate progressScore
 // - Call service layer
 
 // TODO: Implement getSessionEvaluations() - GET /api/v1/evaluations/session/:sessionId
 // - Validate access (session owner or admin)
-// - Query both StudentEvaluation and TutorEvaluation
+// - Query both StudentFeedback and TutorFeedback
 // - Handle anonymous evaluations
 
 // TODO: Export controller functions

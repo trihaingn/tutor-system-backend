@@ -1,20 +1,20 @@
 /**
- * CONTROLLER: FeedbackController
- * FILE: feedback.controller.js
- * MỤC ĐÍCH: Xử lý HTTP requests liên quan đến Session Feedback/Report (UC-18)
+ * CONTROLLER: RecordController
+ * FILE: record.controller.js
+ * MỤC ĐÍCH: Xử lý HTTP requests liên quan đến Session Record/Report (UC-18)
  * 
  * USE CASES:
  * - UC-18: Tutor creates session report after completion
  * 
  * DEPENDENCIES:
- * - FeedbackService: Handle feedback/report creation
+ * - RecordService: Handle record/report creation
  * - ValidationError, NotFoundError, ConflictError
  */
 
 // ============================================================
 // FUNCTION: createSessionReport()
 // ============================================================
-// METHOD: POST /api/v1/feedback/sessions/:sessionId
+// METHOD: POST /api/v1/record/sessions/:sessionId
 // PURPOSE: Tutor tạo report sau buổi học (UC-18)
 // 
 // REQUEST:
@@ -48,19 +48,19 @@
 // 
 // PROCESS:
 // 1. Extract tutorId from JWT
-// 2. Call FeedbackService.createSessionReport()
+// 2. Call RecordService.createSessionReport()
 //    - Validate session status = COMPLETED
 //    - Validate session ownership
 //    - Check no existing report (unique sessionId)
-//    - Create Feedback record
-//    - AUTO SIDE EFFECT: Set ConsultationSession.hasReport = true
+//    - Create Record record
+//    - AUTO SIDE EFFECT: Set TutorSession.hasReport = true
 // 3. Return report data
 // 
 // RESPONSE:
 // {
 //   "success": true,
 //   "data": {
-//     "feedbackId": "...",
+//     "recordId": "...",
 //     "sessionId": "...",
 //     "tutorId": "...",
 //     "summary": "Covered derivatives...",
@@ -78,7 +78,7 @@
 // ============================================================
 // FUNCTION: getSessionReport()
 // ============================================================
-// METHOD: GET /api/v1/feedback/sessions/:sessionId
+// METHOD: GET /api/v1/record/sessions/:sessionId
 // PURPOSE: Xem session report
 // 
 // REQUEST:
@@ -97,7 +97,7 @@
 //    - If role=TUTOR → session.tutorId === userId
 //    - If role=STUDENT → Check Appointment exists
 //    - If role=ADMIN → Allow
-// 4. Query Feedback model (sessionId match)
+// 4. Query Record model (sessionId match)
 // 5. Populate tutorId, studentProgress.studentId
 // 6. Return report
 // 
@@ -105,7 +105,7 @@
 // {
 //   "success": true,
 //   "data": {
-//     "feedbackId": "...",
+//     "recordId": "...",
 //     "session": {
 //       "sessionId": "...",
 //       "title": "Math 101 - Derivatives"
@@ -130,20 +130,20 @@
 // ============================================================
 // FUNCTION: updateSessionReport()
 // ============================================================
-// METHOD: PUT /api/v1/feedback/:feedbackId
+// METHOD: PUT /api/v1/record/:recordId
 // PURPOSE: Tutor update existing report
 // 
 // REQUEST:
-// - Params: { feedbackId: 'ObjectId' }
+// - Params: { recordId: 'ObjectId' }
 // - Body: { summary?, topicsCovered?, studentProgress?, nextSteps?, attachments? }
 // - Headers: { Authorization: 'Bearer <JWT>' }
 // 
 // VALIDATION:
-// - ⚠️ Validate ownership: feedback.tutorId === tutorId
+// - ⚠️ Validate ownership: record.tutorId === tutorId
 // 
 // PROCESS:
 // 1. Extract tutorId from JWT
-// 2. Find feedback by id
+// 2. Find record by id
 // 3. Validate ownership
 // 4. Update fields
 // 5. Return updated report
@@ -151,24 +151,24 @@
 // RESPONSE:
 // {
 //   "success": true,
-//   "data": { ...updated feedback }
+//   "data": { ...updated record }
 // }
 
-// TODO: Import dependencies (FeedbackService, error classes)
+// TODO: Import dependencies (RecordService, error classes)
 
-// TODO: Implement createSessionReport() - POST /api/v1/feedback/sessions/:sessionId
+// TODO: Implement createSessionReport() - POST /api/v1/record/sessions/:sessionId
 // - Validate session COMPLETED
 // - Validate ownership
 // - Check no duplicate report (unique sessionId)
 // - Call service layer
 // - Set session.hasReport = true
 
-// TODO: Implement getSessionReport() - GET /api/v1/feedback/sessions/:sessionId
+// TODO: Implement getSessionReport() - GET /api/v1/record/sessions/:sessionId
 // - Validate access (tutor, attending students, or admin)
-// - Query Feedback model
+// - Query Record model
 // - Populate related data
 
-// TODO: Implement updateSessionReport() - PUT /api/v1/feedback/:feedbackId
+// TODO: Implement updateSessionReport() - PUT /api/v1/record/:recordId
 // - Validate ownership
 // - Update fields
 

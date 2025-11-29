@@ -1,9 +1,9 @@
 /**
- * ROUTES: Evaluation Routes
- * FILE: evaluation.routes.js
- * MỤC ĐÍCH: Định nghĩa API endpoints cho Evaluations (Student & Tutor)
+ * ROUTES: Feedback Rating Routes
+ * FILE: feedback-rating.routes.js
+ * MỤC ĐÍCH: Định nghĩa API endpoints cho Feedbacks (Student & Tutor)
  * 
- * BASE PATH: /api/v1/evaluations
+ * BASE PATH: /api/v1/feedbacks
  * 
  * ENDPOINTS:
  * - POST   /student           - Student evaluates session (UC-26)
@@ -11,7 +11,7 @@
  * - GET    /session/:sessionId - Get all evaluations for session
  */
 
-// TODO: Import express.Router, evaluationController
+// TODO: Import express.Router, feedbackRatingController
 // TODO: Import authMiddleware, roleMiddleware
 
 // ============================================================
@@ -19,7 +19,7 @@
 // ============================================================
 // PURPOSE: Student đánh giá session (UC-26)
 // ACCESS: Protected - STUDENT only
-// CONTROLLER: evaluationController.createStudentEvaluation
+// CONTROLLER: feedbackRatingController.createStudentFeedback
 // 
 // REQUEST BODY:
 // {
@@ -32,19 +32,19 @@
 // VALIDATION:
 // - Session must be COMPLETED
 // - Check studentId in session.participants
-// - Unique constraint: 1 student + 1 session = 1 evaluation
+// - Unique constraint: 1 student + 1 session = 1 feedback
 // 
 // SIDE EFFECTS:
 // - Update Tutor.averageRating
 // - Update Tutor.totalReviews++
-// - Update session.hasEvaluation=true
+// - Update session.hasFeedback=true
 // 
 // PSEUDOCODE:
 // router.post(
 //   '/student',
 //   authMiddleware,
 //   roleMiddleware(['STUDENT']),
-//   evaluationController.createStudentEvaluation
+//   feedbackRatingController.createStudentFeedback
 // )
 
 // ============================================================
@@ -52,7 +52,7 @@
 // ============================================================
 // PURPOSE: Tutor đánh giá student (UC-27)
 // ACCESS: Protected - TUTOR or ADMIN only
-// CONTROLLER: evaluationController.createTutorEvaluation
+// CONTROLLER: feedbackRatingController.createTutorFeedback
 // 
 // REQUEST BODY:
 // {
@@ -66,7 +66,7 @@
 // VALIDATION:
 // - Session must be COMPLETED
 // - Check session.tutorId === userId
-// - Unique constraint: 1 tutor + 1 student + 1 session = 1 evaluation
+// - Unique constraint: 1 tutor + 1 student + 1 session = 1 feedback
 // 
 // SIDE EFFECTS:
 // - Update Student statistics (average progress score)
@@ -76,7 +76,7 @@
 //   '/tutor',
 //   authMiddleware,
 //   roleMiddleware(['TUTOR', 'ADMIN']),
-//   evaluationController.createTutorEvaluation
+//   feedbackRatingController.createTutorFeedback
 // )
 
 // ============================================================
@@ -84,12 +84,12 @@
 // ============================================================
 // PURPOSE: Get all evaluations for a session
 // ACCESS: Protected - TUTOR (owner) or ADMIN only
-// CONTROLLER: evaluationController.getSessionEvaluations
+// CONTROLLER: feedbackRatingController.getSessionFeedbacks
 // 
 // RETURN:
 // {
-//   "studentEvaluations": [...],
-//   "tutorEvaluations": [...]
+//   "studentFeedbacks": [...],
+//   "tutorFeedbacks": [...]
 // }
 // 
 // PSEUDOCODE:
@@ -97,7 +97,7 @@
 //   '/session/:sessionId',
 //   authMiddleware,
 //   roleMiddleware(['TUTOR', 'ADMIN']),
-//   evaluationController.getSessionEvaluations
+//   feedbackRatingController.getSessionFeedbacks
 // )
 
 // TODO: Initialize router, define routes, export

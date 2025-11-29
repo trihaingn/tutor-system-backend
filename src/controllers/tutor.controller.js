@@ -145,7 +145,7 @@
 // 
 // PROCESS:
 // 1. Extract tutorId from JWT
-// 2. Query ConsultationSession model (filter by status, date range)
+// 2. Query TutorSession model (filter by status, date range)
 // 3. Return with pagination
 // 
 // RESPONSE:
@@ -176,7 +176,7 @@
 // 
 // PROCESS:
 // 1. Extract tutorId from JWT
-// 2. Query StudentEvaluation model (tutorId match)
+// 2. Query StudentFeedback model (tutorId match)
 // 3. Populate studentId (if not anonymous), sessionId
 // 4. Return with pagination
 // 
@@ -185,7 +185,7 @@
 //   "success": true,
 //   "data": [
 //     {
-//       "evaluationId": "...",
+//       "feedbackId": "...",
 //       "student": {
 //         "fullName": "Nguyen Van A" // Hidden if isAnonymous=true
 //       },

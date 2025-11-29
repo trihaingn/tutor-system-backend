@@ -4,7 +4,7 @@
  * MỤC ĐÍCH: Generate báo cáo thống kê (Module 7 - Admin/Management Reports)
  * 
  * DEPENDENCIES:
- * - ConsultationSession, Appointment, CourseRegistration, StudentEvaluation models
+ * - TutorSession, Appointment, CourseRegistration, StudentFeedback models
  */
 
 // ============================================================
@@ -19,7 +19,7 @@
 // 
 // PSEUDOCODE:
 // Step 1: Query sessions trong khoảng thời gian
-//   - const sessions = await ConsultationSession.find({
+//   - const sessions = await TutorSession.find({
 //       tutorId: tutorId,
 //       startTime: { $gte: startDate, $lte: endDate }
 //     })
@@ -32,7 +32,7 @@
 //   - const averageParticipants = totalParticipants / totalSessions
 // 
 // Step 3: Query evaluations
-//   - const evaluations = await StudentEvaluation.find({
+//   - const evaluations = await StudentFeedback.find({
 //       tutorId: tutorId,
 //       evaluatedAt: { $gte: startDate, $lte: endDate }
 //     })
@@ -55,8 +55,8 @@
 //       cancelled: cancelledSessions,
 //       averageParticipants
 //     },
-//     evaluation: {
-//       totalReviews: evaluations.length,
+//     feedback: {
+//       totalReviews: feedbacks.length,
 //       averageRating
 //     },
 //     students: {
@@ -82,14 +82,14 @@
 //   - const completedAppointments = appointments.filter(a => a.status === 'COMPLETED').length
 // 
 // Step 3: Query evaluations given by student
-//   - const evaluationsGiven = await StudentEvaluation.find({
+//   - const evaluationsGiven = await StudentFeedback.find({
 //       studentId: studentId,
 //       evaluatedAt: { $gte: startDate, $lte: endDate }
 //     })
 //   - const averageRatingGiven = evaluationsGiven.reduce((sum, e) => sum + e.rating, 0) / evaluationsGiven.length
 // 
 // Step 4: Query evaluations received from tutors
-//   - const evaluationsReceived = await TutorEvaluation.find({
+//   - const evaluationsReceived = await TutorFeedback.find({
 //       studentId: studentId,
 //       evaluatedAt: { $gte: startDate, $lte: endDate }
 //     })
@@ -111,7 +111,7 @@
 // 
 // PSEUDOCODE:
 // Step 1: Query tổng sessions
-//   - const totalSessions = await ConsultationSession.countDocuments({
+//   - const totalSessions = await TutorSession.countDocuments({
 //       startTime: { $gte: startDate, $lte: endDate }
 //     })
 // 
@@ -146,7 +146,7 @@
 //     topTutors
 //   }
 
-// TODO: Import models (ConsultationSession, Appointment, CourseRegistration, StudentEvaluation, TutorEvaluation, Student, Tutor)
+// TODO: Import models (TutorSession, Appointment, CourseRegistration, StudentFeedback, TutorFeedback, Student, Tutor)
 
 // TODO: Implement generateTutorReport(tutorId, startDate, endDate)
 // TODO: Implement generateStudentReport(studentId, startDate, endDate)

@@ -94,7 +94,7 @@
 //   '/me/evaluations',
 //   authMiddleware,
 //   roleMiddleware(['TUTOR', 'ADMIN']),
-//   tutorController.getMyEvaluations
+//   tutorController.getMyFeedbacks
 // )
 
 import express from 'express';

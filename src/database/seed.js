@@ -17,7 +17,7 @@
 // const User = require('../models/User')
 // const Student = require('../models/Student')
 // const Tutor = require('../models/Tutor')
-// const ConsultationSession = require('../models/ConsultationSession')
+// const TutorSession = require('../models/TutorSession')
 // const CourseRegistration = require('../models/CourseRegistration')
 
 // ============================================================
@@ -57,7 +57,7 @@
 //     statistics: {
 //       registeredTutors: 2,
 //       totalAppointments: 5,
-//       totalEvaluations: 3
+//       totalFeedbacks: 3
 //     }
 //   }
 // ]
@@ -175,14 +175,14 @@
 // const seedSessions = async (tutors) => {
 //   console.log('[SEED] Seeding sessions...')
 //   
-//   await ConsultationSession.deleteMany({})
+//   await TutorSession.deleteMany({})
 //   
 //   const sessionsData = sampleSessions.map(s => ({
 //     ...s,
 //     tutorId: tutors[0]._id
 //   }))
 //   
-//   const sessions = await ConsultationSession.insertMany(sessionsData)
+//   const sessions = await TutorSession.insertMany(sessionsData)
 //   
 //   console.log(`[SEED] Created ${sessions.length} sessions`)
 //   return sessions
@@ -254,7 +254,7 @@
 //     await User.deleteMany({})
 //     await Student.deleteMany({})
 //     await Tutor.deleteMany({})
-//     await ConsultationSession.deleteMany({})
+//     await TutorSession.deleteMany({})
 //     await CourseRegistration.deleteMany({})
 //     // ... other models
 //     
