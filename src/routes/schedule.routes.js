@@ -12,8 +12,11 @@
  * - DELETE /availability/:id   - Tutor deletes availability
  */
 
-// TODO: Import express.Router, scheduleController
-// TODO: Import authMiddleware, roleMiddleware
+import express from 'express';
+const router = express.Router();
+import * as scheduleController from '../controllers/schedule.controller.js';
+import { authMiddleware } from '../middleware/authMiddleware.js';
+import { roleMiddleware } from '../middleware/roleMiddleware.js';
 
 // ============================================================
 // ROUTE: POST /api/v1/schedules/availability
@@ -94,6 +97,42 @@
 //   scheduleController.deleteAvailability
 // )
 
-// TODO: Initialize router
+// ============================================================
+// ROUTES IMPLEMENTATION
+// ============================================================
+
+// POST /api/v1/schedules/availability - Tutor sets availability (UC-10)
+router.post(
+  '/availability',
+  authMiddleware,
+  roleMiddleware(['TUTOR', 'ADMIN']),
+  scheduleController.setAvailability
+);
+
+// GET /api/v1/schedules/availability/me - Get my availability
+router.get(
+  '/availability/me',
+  authMiddleware,
+  roleMiddleware(['TUTOR', 'ADMIN']),
+  scheduleController.getMyAvailability
+);
+
+// PUT /api/v1/schedules/availability/:id - Update availability
+router.put(
+  '/availability/:id',
+  authMiddleware,
+  roleMiddleware(['TUTOR', 'ADMIN']),
+  scheduleController.updateAvailability
+);
+
+// DELETE /api/v1/schedules/availability/:id - Delete availability
+router.delete(
+  '/availability/:id',
+  authMiddleware,
+  roleMiddleware(['TUTOR', 'ADMIN']),
+  scheduleController.deleteAvailability
+);
+
+export default router;
 // TODO: Define routes
 // TODO: Export router

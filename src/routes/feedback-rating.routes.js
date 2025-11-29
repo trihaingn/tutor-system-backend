@@ -3,7 +3,7 @@
  * FILE: feedback-rating.routes.js
  * MỤC ĐÍCH: Định nghĩa API endpoints cho Feedbacks (Student & Tutor)
  * 
- * BASE PATH: /api/v1/feedbacks
+ * BASE PATH: /api/v1/evaluations
  * 
  * ENDPOINTS:
  * - POST   /student           - Student evaluates session (UC-26)
@@ -11,8 +11,11 @@
  * - GET    /session/:sessionId - Get all evaluations for session
  */
 
-// TODO: Import express.Router, feedbackRatingController
-// TODO: Import authMiddleware, roleMiddleware
+import express from 'express';
+const router = express.Router();
+import * as feedbackController from '../controllers/feedback-rating.controller.js';
+import { authMiddleware } from '../middleware/authMiddleware.js';
+import { roleMiddleware } from '../middleware/roleMiddleware.js';
 
 // ============================================================
 // ROUTE: POST /api/v1/evaluations/student
@@ -100,4 +103,31 @@
 //   feedbackRatingController.getSessionFeedbacks
 // )
 
-// TODO: Initialize router, define routes, export
+// ============================================================
+// ROUTES IMPLEMENTATION
+// ============================================================
+
+// POST /api/v1/evaluations/student - Student evaluates session (UC-26)
+router.post(
+  '/student',
+  authMiddleware,
+  roleMiddleware(['STUDENT']),
+  feedbackController.createStudentFeedback
+);
+
+// POST /api/v1/evaluations/tutor - Tutor evaluates student (UC-27)
+router.post(
+  '/tutor',
+  authMiddleware,
+  roleMiddleware(['TUTOR', 'ADMIN']),
+  feedbackController.createTutorFeedback
+);
+
+// GET /api/v1/evaluations/session/:sessionId - Get all evaluations for session (UC-28)
+router.get(
+  '/session/:sessionId',
+  authMiddleware,
+  feedbackController.getSessionEvaluations
+);
+
+export default router;

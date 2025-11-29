@@ -12,8 +12,11 @@
  * - POST   /:sessionId/appointments - Student books appointment (UC-12)
  */
 
-// TODO: Import express.Router, sessionController
-// TODO: Import authMiddleware, roleMiddleware
+import express from 'express';
+const router = express.Router();
+import * as sessionController from '../controllers/session.controller.js';
+import { authMiddleware } from '../middleware/authMiddleware.js';
+import { roleMiddleware } from '../middleware/roleMiddleware.js';
 
 // ============================================================
 // ROUTE: POST /api/v1/sessions
@@ -99,6 +102,39 @@
 //   sessionController.bookAppointment
 // )
 
-// TODO: Initialize router
-// TODO: Define routes
-// TODO: Export router
+// ============================================================
+// ROUTES IMPLEMENTATION
+// ============================================================
+
+// POST /api/v1/sessions - Tutor creates session (UC-11)
+router.post(
+  '/',
+  authMiddleware,
+  roleMiddleware(['TUTOR', 'ADMIN']),
+  sessionController.createSession
+);
+
+// GET /api/v1/sessions/upcoming - Get upcoming sessions (UC-16, UC-17)
+router.get(
+  '/upcoming',
+  authMiddleware,
+  sessionController.getUpcomingSessions
+);
+
+// POST /api/v1/sessions/:sessionId/appointments - Student books appointment (UC-12)
+router.post(
+  '/:sessionId/appointments',
+  authMiddleware,
+  roleMiddleware(['STUDENT']),
+  sessionController.bookAppointment
+);
+
+// DELETE /api/v1/sessions/:id - Tutor cancels session (UC-14)
+router.delete(
+  '/:id',
+  authMiddleware,
+  roleMiddleware(['TUTOR', 'ADMIN']),
+  sessionController.cancelSession
+);
+
+export default router;

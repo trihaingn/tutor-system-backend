@@ -11,8 +11,11 @@
  * - GET /me/feedbacks    - Get my feedback history (UC-29)
  */
 
-// TODO: Import express.Router, studentController
-// TODO: Import authMiddleware, roleMiddleware
+import express from 'express';
+const router = express.Router();
+import * as studentController from '../controllers/student.controller.js';
+import { authMiddleware } from '../middleware/authMiddleware.js';
+import { roleMiddleware } from '../middleware/roleMiddleware.js';
 
 // ============================================================
 // ROUTE: GET /api/v1/students/me
@@ -59,11 +62,9 @@
 //   studentController.getMyFeedbacks
 // )
 
-import express from 'express';
-const router = express.Router();
-import * as studentController from '../controllers/student.controller.js';
-import { authMiddleware } from '../middleware/authMiddleware.js';
-import { roleMiddleware } from '../middleware/roleMiddleware.js';
+// ============================================================
+// ROUTES IMPLEMENTATION
+// ============================================================
 
 // GET /api/v1/students/me - Get my profile
 router.get(
@@ -71,6 +72,22 @@ router.get(
   authMiddleware,
   roleMiddleware(['STUDENT']),
   studentController.getMyProfile
+);
+
+// GET /api/v1/students/me/appointments - Get my appointment history
+router.get(
+  '/me/appointments',
+  authMiddleware,
+  roleMiddleware(['STUDENT']),
+  studentController.getMyAppointments
+);
+
+// GET /api/v1/students/me/evaluations - Get my evaluation history
+router.get(
+  '/me/evaluations',
+  authMiddleware,
+  roleMiddleware(['STUDENT']),
+  studentController.getMyEvaluations
 );
 
 export default router;

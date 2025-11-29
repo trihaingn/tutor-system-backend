@@ -3,16 +3,19 @@
  * FILE: record.routes.js
  * MỤC ĐÍCH: Định nghĩa API endpoints cho Session Record/Reports
  * 
- * BASE PATH: /api/v1/record
+ * BASE PATH: /api/v1/records
  * 
  * ENDPOINTS:
- * - POST   /sessions/:sessionId  - Tutor creates report (UC-18)
- * - GET    /sessions/:sessionId  - Get session report
+ * - POST   /sessions/:sessionId  - Tutor creates report (UC-21)
+ * - GET    /sessions/:sessionId  - Get session report (UC-22)
  * - PUT    /:recordId          - Update report
  */
 
-// TODO: Import express.Router, recordController
-// TODO: Import authMiddleware, roleMiddleware
+import express from 'express';
+const router = express.Router();
+import * as recordController from '../controllers/record.controller.js';
+import { authMiddleware } from '../middleware/authMiddleware.js';
+import { roleMiddleware } from '../middleware/roleMiddleware.js';
 
 // ============================================================
 // ROUTE: POST /api/v1/record/sessions/:sessionId
@@ -61,7 +64,7 @@
 // )
 
 // ============================================================
-// ROUTE: PUT /api/v1/record/:recordId
+// ROUTE: PUT /api/v1/records/:recordId
 // ============================================================
 // PURPOSE: Tutor update session report
 // ACCESS: Protected - TUTOR (owner) or ADMIN
@@ -78,4 +81,31 @@
 //   recordController.updateSessionReport
 // )
 
-// TODO: Initialize router, define routes, export
+// ============================================================
+// ROUTES IMPLEMENTATION
+// ============================================================
+
+// POST /api/v1/records/sessions/:sessionId - Create session report (UC-21)
+router.post(
+  '/sessions/:sessionId',
+  authMiddleware,
+  roleMiddleware(['TUTOR', 'ADMIN']),
+  recordController.createSessionReport
+);
+
+// GET /api/v1/records/sessions/:sessionId - Get session report (UC-22)
+router.get(
+  '/sessions/:sessionId',
+  authMiddleware,
+  recordController.getSessionReport
+);
+
+// PUT /api/v1/records/:recordId - Update session report
+router.put(
+  '/:recordId',
+  authMiddleware,
+  roleMiddleware(['TUTOR', 'ADMIN']),
+  recordController.updateSessionReport
+);
+
+export default router;

@@ -104,12 +104,22 @@ import authRoutes from './auth.routes.js';
 import registrationRoutes from './registration.routes.js';
 import studentRoutes from './student.routes.js';
 import tutorRoutes from './tutor.routes.js';
+import sessionRoutes from './session.routes.js';
+import scheduleRoutes from './schedule.routes.js';
+import notificationRoutes from './notification.routes.js';
+import recordRoutes from './record.routes.js';
+import evaluationRoutes from './feedback-rating.routes.js';
 
 // Mount sub-routes
 router.use('/auth', authRoutes);
 router.use('/registrations', registrationRoutes);
 router.use('/students', studentRoutes);
 router.use('/tutors', tutorRoutes);
+router.use('/sessions', sessionRoutes);
+router.use('/schedules', scheduleRoutes);
+router.use('/notifications', notificationRoutes);
+router.use('/records', recordRoutes);
+router.use('/evaluations', evaluationRoutes);
 
 // Health check endpoint
 router.get('/health', (req, res) => {
