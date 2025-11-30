@@ -11,6 +11,38 @@ const StudentSchema = new mongoose.Schema(
       index: true
     },
     
+    // Student ID
+    mssv: {
+      type: String,
+      sparse: true,
+      trim: true
+    },
+    
+    // Academic Info
+    major: {
+      type: String,
+      trim: true
+    },
+    
+    enrollmentYear: {
+      type: Number
+    },
+    
+    currentYear: {
+      type: Number
+    },
+    
+    gpa: {
+      type: Number,
+      min: 0,
+      max: 4
+    },
+    
+    totalCredits: {
+      type: Number,
+      default: 0
+    },
+    
     // Tutor Program Participation
     registeredTutors: [
       {
@@ -34,7 +66,7 @@ const StudentSchema = new mongoose.Schema(
 
 // Indexes
 StudentSchema.index({ userId: 1 });
-StudentSchema.index({ mssv: 1 });
+StudentSchema.index({ mssv: 1 }, { unique: true, sparse: true });
 StudentSchema.index({ major: 1, enrollmentYear: 1 });
 
 export default mongoose.model('Student', StudentSchema);

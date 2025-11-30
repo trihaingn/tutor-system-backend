@@ -59,7 +59,8 @@ const UserSchema = new mongoose.Schema(
 
 // Composite indexes
 UserSchema.index({ email: 1, role: 1 }, { unique: true});
-UserSchema.index({ hcmutId: 1, role: 1 }, { unique: true})
+// Sparse index: only enforces uniqueness when hcmutId is not null
+UserSchema.index({ hcmutId: 1, role: 1 }, { unique: true, sparse: true })
 
 // Virtual fields
 UserSchema.virtual('student', {

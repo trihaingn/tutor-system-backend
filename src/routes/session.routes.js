@@ -14,7 +14,7 @@
 
 import express from 'express';
 const router = express.Router();
-import * as sessionController from '../controllers/session.controller.js';
+import sessionController from '../controllers/session.controller.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 import { roleMiddleware } from '../middleware/roleMiddleware.js';
 

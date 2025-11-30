@@ -205,4 +205,36 @@
 // - Update status
 // - Trigger notifications
 
-// TODO: Export controller functions
+import { asyncHandler } from '../middleware/errorMiddleware.js';
+
+class SessionController {
+  createSession = asyncHandler(async (req, res) => {
+    res.status(501).json({
+      success: false,
+      message: 'createSession - Not implemented yet'
+    });
+  });
+
+  getUpcomingSessions = asyncHandler(async (req, res) => {
+    res.status(501).json({
+      success: false,
+      message: 'getUpcomingSessions - Not implemented yet'
+    });
+  });
+
+  bookAppointment = asyncHandler(async (req, res) => {
+    res.status(501).json({
+      success: false,
+      message: 'bookAppointment - Not implemented yet'
+    });
+  });
+
+  cancelSession = asyncHandler(async (req, res) => {
+    res.status(501).json({
+      success: false,
+      message: 'cancelSession - Not implemented yet'
+    });
+  });
+}
+
+export default new SessionController();

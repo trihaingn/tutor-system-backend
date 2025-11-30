@@ -93,9 +93,9 @@
 // }
 
 // ============================================================
-// FUNCTION: getMyEvaluations()
+// FUNCTION: getMyFeedbacks()
 // ============================================================
-// METHOD: GET /api/v1/students/me/evaluations
+// METHOD: GET /api/v1/students/me/feedbacks
 // PURPOSE: Student xem lịch sử evaluations đã cho (UC-29)
 // 
 // REQUEST:
@@ -132,30 +132,153 @@ import * as StudentService from '../services/user/StudentService.js';
 import StudentRepository from '../repositories/StudentRepository.js';
 import { asyncHandler, ValidationError } from '../middleware/errorMiddleware.js';
 
-/**
- * GET /api/v1/students/me
- * Student views own profile (UC-06)
- */
-const getMyProfile = asyncHandler(async (req, res) => {
-  // Get userId from authenticated user
-  const userId = req.userId;
-  
-  // Find student by userId
-  const student = await StudentRepository.findByUserId(userId);
-  
-  if (!student) {
-    throw new ValidationError('User is not a student');
-  }
+class StudentController {
+  /**
+   * GET /api/v1/students/me
+   * Student views own profile (UC-06)
+   */
+  getMyProfile = asyncHandler(async (req, res) => {
+    // Get userId from authenticated user
+    const userId = req.userId;
+    
+    // Find student by userId
+    const student = await StudentRepository.findByUserId(userId);
+    
+    if (!student) {
+      throw new ValidationError('User is not a student');
+    }
 
-  // Get full profile
-  const profile = await StudentService.getStudentProfile(student._id);
+    // Get full profile
+    const profile = await StudentService.getStudentProfile(student._id);
 
-  res.status(200).json({
-    success: true,
-    data: profile
+    res.status(200).json({
+      success: true,
+      data: profile
+    });
   });
-});
 
-export {
-  getMyProfile
-};
+  getMyAppointments = asyncHandler(async (req, res) => {
+    const userId = req.userId;
+    
+    // Find student profile
+    const Student = (await import('../models/Student.model.js')).default;
+    const student = await Student.findOne({ userId }).lean();
+    
+    if (!student) {
+      const { NotFoundError } = await import('../middleware/errorMiddleware.js');
+      throw new NotFoundError('Student profile not found');
+    }
+    
+    // Query appointments with pagination
+    const TutorSession = (await import('../models/TutorSession.model.js')).default;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    
+    // Filter by status if provided
+    const filter = {
+      'participants.studentId': student._id
+    };
+    
+    if (req.query.status) {
+      filter.status = req.query.status;
+    }
+    
+    const [appointments, total] = await Promise.all([
+      TutorSession.find(filter)
+        .populate('tutorId', 'userId subjects rating totalSessions')
+        .populate({
+          path: 'tutorId',
+          populate: {
+            path: 'userId',
+            select: 'fullName email'
+          }
+        })
+        .sort({ startTime: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      TutorSession.countDocuments(filter)
+    ]);
+    
+    // Extract student's participation data
+    const enrichedAppointments = appointments.map(session => {
+      const participation = session.participants.find(
+        p => p.studentId.toString() === student._id.toString()
+      );
+      
+      return {
+        ...session,
+        myParticipation: participation
+      };
+    });
+    
+    res.status(200).json({
+      success: true,
+      data: enrichedAppointments,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+  });
+
+  getMyFeedbacks = asyncHandler(async (req, res) => {
+    const userId = req.userId;
+    
+    // Find student profile
+    const Student = (await import('../models/Student.model.js')).default;
+    const student = await Student.findOne({ userId }).lean();
+    
+    if (!student) {
+      const { NotFoundError } = await import('../middleware/errorMiddleware.js');
+      throw new NotFoundError('Student profile not found');
+    }
+    
+    // Query feedbacks with pagination
+    const StudentFeedback = (await import('../models/StudentFeedback.model.js')).default;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+    
+    const filter = { studentId: student._id };
+    
+    // Filter by rating if provided
+    if (req.query.rating) {
+      filter.rating = parseInt(req.query.rating);
+    }
+    
+    const [feedbacks, total] = await Promise.all([
+      StudentFeedback.find(filter)
+        .populate('tutorId', 'userId subjects rating totalSessions')
+        .populate({
+          path: 'tutorId',
+          populate: {
+            path: 'userId',
+            select: 'fullName email'
+          }
+        })
+        .populate('sessionId', 'title subject startTime endTime status')
+        .sort({ evaluatedAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      StudentFeedback.countDocuments(filter)
+    ]);
+    
+    res.status(200).json({
+      success: true,
+      data: feedbacks,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+  });
+}
+
+export default new StudentController();

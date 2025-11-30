@@ -10,12 +10,12 @@
  * - GET /:id               - Get tutor details (public)
  * - GET /me                - Get my profile (UC-20)
  * - GET /me/sessions       - Get my sessions (UC-21)
- * - GET /me/evaluations    - Get my evaluations (UC-22)
+ * - GET /me/feedbacks      - Get my feedbacks (UC-22)
  */
 
 import express from 'express';
 const router = express.Router();
-import * as tutorController from '../controllers/tutor.controller.js';
+import tutorController from '../controllers/tutor.controller.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 import { roleMiddleware } from '../middleware/roleMiddleware.js';
 
@@ -86,15 +86,15 @@ import { roleMiddleware } from '../middleware/roleMiddleware.js';
 // )
 
 // ============================================================
-// ROUTE: GET /api/v1/tutors/me/evaluations
+// ROUTE: GET /api/v1/tutors/me/feedbacks
 // ============================================================
-// PURPOSE: Tutor xem evaluations received (UC-22)
+// PURPOSE: Tutor xem feedbacks received (UC-22)
 // ACCESS: Protected - TUTOR or ADMIN only
 // QUERY PARAMS: { page?, limit? }
 // 
 // PSEUDOCODE:
 // router.get(
-//   '/me/evaluations',
+//   '/me/feedbacks',
 //   authMiddleware,
 //   roleMiddleware(['TUTOR', 'ADMIN']),
 //   tutorController.getMyFeedbacks
@@ -109,6 +109,20 @@ router.get(
   '/search',
   authMiddleware,
   tutorController.searchTutors
+);
+
+// GET /api/v1/tutors/by-hcmut-id/:hcmutId - Get tutor by HCMUT ID (maCB/staff_id)
+router.get(
+  '/by-hcmut-id/:hcmutId',
+  authMiddleware,
+  tutorController.getTutorByHcmutId
+);
+
+// GET /api/v1/tutors/by-hcmut-id/:hcmutId/availability - Get tutor availability by HCMUT ID
+router.get(
+  '/by-hcmut-id/:hcmutId/availability',
+  authMiddleware,
+  tutorController.getTutorAvailabilityByHcmutId
 );
 
 // GET /api/v1/tutors/me - Get my tutor profile
@@ -127,12 +141,12 @@ router.get(
   tutorController.getMySessions
 );
 
-// GET /api/v1/tutors/me/evaluations - Get my evaluations
+// GET /api/v1/tutors/me/feedbacks - Get my feedbacks
 router.get(
-  '/me/evaluations',
+  '/me/feedbacks',
   authMiddleware,
   roleMiddleware(['TUTOR', 'ADMIN']),
-  tutorController.getMyEvaluations
+  tutorController.getMyFeedbacks
 );
 
 // GET /api/v1/tutors/:tutorId/availability - Get tutor availability (public)
@@ -140,14 +154,6 @@ router.get(
   '/:tutorId/availability',
   authMiddleware,
   tutorController.getTutorAvailability
-);
-
-// GET /api/v1/tutors/:id - Get tutor details (UC-06)
-// Note: This must be LAST to avoid conflicting with /search, /me routes
-router.get(
-  '/:id',
-  authMiddleware,
-  tutorController.getTutorDetails
 );
 
 export default router;

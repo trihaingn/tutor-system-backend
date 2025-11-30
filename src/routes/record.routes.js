@@ -13,7 +13,7 @@
 
 import express from 'express';
 const router = express.Router();
-import * as recordController from '../controllers/record.controller.js';
+import recordController from '../controllers/record.controller.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 import { roleMiddleware } from '../middleware/roleMiddleware.js';
 

@@ -12,6 +12,132 @@
  * - GET  /me             - Get current user info (UC-03)
  */
 
+/**
+ * @swagger
+ * tags:
+ *   name: Authentication
+ *   description: SSO/CAS authentication endpoints
+ */
+
+/**
+ * @swagger
+ * /auth/login:
+ *   get:
+ *     summary: Redirect to SSO login page
+ *     description: Initiates SSO authentication by redirecting to HCMUT SSO portal
+ *     tags: [Authentication]
+ *     responses:
+ *       302:
+ *         description: Redirects to SSO login page
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+
+/**
+ * @swagger
+ * /auth/callback:
+ *   get:
+ *     summary: Handle SSO callback
+ *     description: Processes SSO callback with ticket, validates user, syncs DATACORE, generates JWT
+ *     tags: [Authentication]
+ *     parameters:
+ *       - in: query
+ *         name: ticket
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: SSO ticket from CAS server
+ *         example: ST-123456-abcdefghijklmnop
+ *     responses:
+ *       302:
+ *         description: Redirects to frontend dashboard with JWT in cookie
+ *         headers:
+ *           Set-Cookie:
+ *             description: JWT access token
+ *             schema:
+ *               type: string
+ *               example: accessToken=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...; HttpOnly; Path=/
+ *       401:
+ *         description: Invalid ticket or authentication failed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       500:
+ *         description: Internal server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+
+/**
+ * @swagger
+ * /auth/logout:
+ *   post:
+ *     summary: Logout user
+ *     description: Clears JWT token and logs out the current user
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: Successfully logged out
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Logged out successfully
+ *       401:
+ *         description: Unauthorized - Invalid or missing token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+
+/**
+ * @swagger
+ * /auth/me:
+ *   get:
+ *     summary: Get current user info
+ *     description: Returns profile information of the currently authenticated user
+ *     tags: [Authentication]
+ *     security:
+ *       - bearerAuth: []
+ *       - cookieAuth: []
+ *     responses:
+ *       200:
+ *         description: User profile retrieved successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 data:
+ *                   $ref: '#/components/schemas/User'
+ *       401:
+ *         description: Unauthorized - Invalid or missing token
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ */
+
 // TODO: Import express.Router
 // TODO: Import authController (login, handleCallback, logout, getCurrentUser)
 // TODO: Import authMiddleware (protect routes)
@@ -86,20 +212,32 @@
 
 import express from 'express';
 const router = express.Router();
-import * as authController from '../controllers/auth.controller.js';
+import authController from '../controllers/auth.controller.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 
 // ============================================================
-// LEGACY SSO ROUTES (if still needed)
+// CAS AUTHENTICATION ROUTES (Primary)
 // ============================================================
-// GET /api/v1/auth/login - Redirect to SSO
-router.get('/login', authController.login);
+/**
+ * GET /api/v1/auth/login
+ * Redirect user to CAS login page (main login endpoint)
+ * 
+ * NOTE: This is the primary login route that redirects to CAS
+ * For backward compatibility, also available at /auth/cas/login
+ */
+router.get('/login', authController.casLogin);
 
-// GET /api/v1/auth/callback - Handle SSO callback
-router.get('/callback', authController.handleCallback);
+/**
+ * GET /api/v1/auth/callback
+ * Handle CAS callback and validate ticket (main callback endpoint)
+ * 
+ * NOTE: This is the primary callback route from CAS
+ * For backward compatibility, also available at /auth/cas/callback
+ */
+router.get('/callback', authController.casCallback);
 
 // ============================================================
-// CAS AUTHENTICATION ROUTES
+// CAS AUTHENTICATION ROUTES (Alternative paths)
 // ============================================================
 /**
  * GET /api/v1/auth/cas/login

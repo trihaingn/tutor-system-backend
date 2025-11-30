@@ -13,7 +13,7 @@
 
 import express from 'express';
 const router = express.Router();
-import * as studentController from '../controllers/student.controller.js';
+import studentController from '../controllers/student.controller.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 import { roleMiddleware } from '../middleware/roleMiddleware.js';
 
@@ -48,15 +48,15 @@ import { roleMiddleware } from '../middleware/roleMiddleware.js';
 // )
 
 // ============================================================
-// ROUTE: GET /api/v1/students/me/evaluations
+// ROUTE: GET /api/v1/students/me/feedbacks
 // ============================================================
-// PURPOSE: Student xem evaluations đã cho (UC-29)
+// PURPOSE: Student xem feedbacks đã cho (UC-29)
 // ACCESS: Protected - STUDENT only
 // QUERY PARAMS: { page?, limit? }
 // 
 // PSEUDOCODE:
 // router.get(
-//   '/me/evaluations',
+//   '/me/feedbacks',
 //   authMiddleware,
 //   roleMiddleware(['STUDENT']),
 //   studentController.getMyFeedbacks
@@ -82,12 +82,12 @@ router.get(
   studentController.getMyAppointments
 );
 
-// GET /api/v1/students/me/evaluations - Get my evaluation history
+// GET /api/v1/students/me/feedbacks - Get my feedback history
 router.get(
-  '/me/evaluations',
+  '/me/feedbacks',
   authMiddleware,
   roleMiddleware(['STUDENT']),
-  studentController.getMyEvaluations
+  studentController.getMyFeedbacks
 );
 
 export default router;

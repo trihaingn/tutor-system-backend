@@ -134,6 +134,7 @@
 import express from 'express';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
+import swaggerUi from 'swagger-ui-express';
 
 // Import middleware
 import { errorHandler } from './middleware/errorMiddleware.js';
@@ -141,6 +142,9 @@ import corsMiddleware from './middleware/corsMiddleware.js';
 
 // Import routes
 import routes from './routes/index.js';
+
+// Import Swagger configuration
+import swaggerSpec from './config/swagger.config.js';
 
 // Initialize Express app
 const app = express();
@@ -171,6 +175,19 @@ app.get('/health', (req, res) => {
     uptime: process.uptime(),
     environment: process.env.NODE_ENV || 'development'
   });
+});
+
+// Swagger UI documentation
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  explorer: true,
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: 'HCMUT Tutor System API Docs'
+}));
+
+// Swagger JSON endpoint
+app.get('/api-docs.json', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  res.send(swaggerSpec);
 });
 
 // Mount API routes

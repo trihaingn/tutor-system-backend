@@ -187,10 +187,10 @@ const errorHandler = (err, req, res, next) => {
   if (err.name === 'ValidationError') {
     statusCode = 400;
     message = 'Validation Error';
-    errors = Object.values(err.errors).map(e => ({
+    errors = err.errors ? Object.values(err.errors).map(e => ({
       field: e.path,
       message: e.message
-    }));
+    })) : null;
   }
 
   // Handle Mongoose CastError (invalid ObjectId)

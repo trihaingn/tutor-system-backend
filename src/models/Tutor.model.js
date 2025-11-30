@@ -11,15 +11,28 @@ const TutorSchema = new mongoose.Schema(
       index: true
     },
     
-    // Subjects
-    subject: {
-        type: [String],
-        validate: v => v.length > 0
+    // Subjects taught
+    subjects: {
+      type: [String],
+      default: []
     },
+    
+    // Tutor info
+    bio: {
+      type: String,
+      default: ''
+    },
+    
     maxStudents: {
-        type: Number,
-        default: 200,
+      type: Number,
+      default: 200
     },
+    
+    isAcceptingStudents: {
+      type: Boolean,
+      default: true
+    },
+    
     stats: {
       totalStudents: { type: Number, default: 0 },
       totalSessions: { type: Number, default: 0 },

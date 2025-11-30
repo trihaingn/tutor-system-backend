@@ -180,4 +180,29 @@
 // - Query both StudentFeedback and TutorFeedback
 // - Handle anonymous evaluations
 
-// TODO: Export controller functions
+import { asyncHandler } from '../middleware/errorMiddleware.js';
+
+class FeedbackRatingController {
+  createStudentFeedback = asyncHandler(async (req, res) => {
+    res.status(501).json({
+      success: false,
+      message: 'createStudentFeedback - Not implemented yet'
+    });
+  });
+
+  createTutorFeedback = asyncHandler(async (req, res) => {
+    res.status(501).json({
+      success: false,
+      message: 'createTutorFeedback - Not implemented yet'
+    });
+  });
+
+  getSessionEvaluations = asyncHandler(async (req, res) => {
+    res.status(501).json({
+      success: false,
+      message: 'getSessionEvaluations - Not implemented yet'
+    });
+  });
+}
+
+export default new FeedbackRatingController();

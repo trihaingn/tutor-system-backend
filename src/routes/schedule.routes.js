@@ -14,7 +14,7 @@
 
 import express from 'express';
 const router = express.Router();
-import * as scheduleController from '../controllers/schedule.controller.js';
+import scheduleController from '../controllers/schedule.controller.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 import { roleMiddleware } from '../middleware/roleMiddleware.js';
 

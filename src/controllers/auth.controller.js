@@ -118,104 +118,145 @@ import jwt from 'jsonwebtoken';
 
 const { SSO_LOGIN_URL, SSO_SERVICE_URL } = ssoConfig;
 
-/**
- * GET /api/v1/auth/login
- * Redirect user to SSO HCMUT login page
- */
-const login = asyncHandler(async (req, res) => {
-  const serviceUrl = SSO_SERVICE_URL || `${req.protocol}://${req.get('host')}/api/v1/auth/callback`;
-  const loginUrl = `${SSO_LOGIN_URL}?service=${encodeURIComponent(serviceUrl)}`;
-  
-  res.redirect(loginUrl);
-});
+class AuthController {
+  /**
+   * GET /api/v1/auth/login
+   * Redirect user to SSO HCMUT login page
+   */
+  login = asyncHandler(async (req, res) => {
+    const serviceUrl = SSO_SERVICE_URL || `${req.protocol}://${req.get('host')}/api/v1/auth/callback`;
+    const loginUrl = `${SSO_LOGIN_URL}?service=${encodeURIComponent(serviceUrl)}`;
+    
+    res.redirect(loginUrl);
+  });
 
-/**
- * GET /api/v1/auth/callback
- * Handle callback from SSO HCMUT (UC-01, UC-04)
- */
-const handleCallback = asyncHandler(async (req, res) => {
-  const { ticket } = req.query;
-  const service = SSO_SERVICE_URL || `${req.protocol}://${req.get('host')}/api/v1/auth/callback`;
+  /**
+   * GET /api/v1/auth/callback
+   * Handle callback from SSO HCMUT (UC-01, UC-04)
+   */
+  handleCallback = asyncHandler(async (req, res) => {
+    const { ticket } = req.query;
+    const service = SSO_SERVICE_URL || `${req.protocol}://${req.get('host')}/api/v1/auth/callback`;
 
-  if (!ticket) {
-    return res.status(400).json({
-      success: false,
-      message: 'Missing SSO ticket'
+    if (!ticket) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing SSO ticket'
+      });
+    }
+
+    // Call AuthService to handle login flow
+    const result = await AuthService.login(ticket, service);
+
+    // Set JWT in HTTP-only cookie
+    res.cookie('jwt', result.token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 24 * 60 * 60 * 1000 // 1 day
     });
-  }
 
-  // Call AuthService to handle login flow
-  const result = await AuthService.login(ticket, service);
-
-  // Set JWT in HTTP-only cookie
-  res.cookie('jwt', result.token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    maxAge: 24 * 60 * 60 * 1000 // 1 day
+    // Return JSON response (or redirect to frontend)
+    res.status(200).json({
+      success: true,
+      data: result.user,
+      token: result.token,
+      message: 'Login successful'
+    });
   });
 
-  // Return JSON response (or redirect to frontend)
-  res.status(200).json({
-    success: true,
-    data: result.user,
-    token: result.token,
-    message: 'Login successful'
+  /**
+   * POST /api/v1/auth/logout
+   * Logout user (UC-02)
+   */
+  logout = asyncHandler(async (req, res) => {
+    // Clear JWT cookie
+    res.clearCookie('jwt');
+
+    const result = await AuthService.logout();
+
+    res.status(200).json(result);
   });
-});
 
-/**
- * POST /api/v1/auth/logout
- * Logout user (UC-02)
- */
-const logout = asyncHandler(async (req, res) => {
-  // Clear JWT cookie
-  res.clearCookie('jwt');
+  /**
+   * GET /api/v1/auth/me
+   * Get current logged-in user info (UC-03)
+   */
+  getCurrentUser = asyncHandler(async (req, res) => {
+    // userId is attached by authMiddleware
+    const userId = req.userId;
 
-  const result = await AuthService.logout();
+    const user = await UserService.getUserById(userId);
 
-  res.status(200).json(result);
-});
+    res.status(200).json({
+      success: true,
+      data: {
+        userId: user._id,
+        email: user.email,
+        fullName: user.fullName,
+        role: user.role,
+        status: user.status,
+        mssv: user.mssv,
+        maCB: user.maCB,
+        student: user.student || null,
+        tutor: user.tutor || null
+      }
+    });
+  });
 
-/**
- * GET /api/v1/auth/me
- * Get current logged-in user info (UC-03)
- */
-const getCurrentUser = asyncHandler(async (req, res) => {
-  // userId is attached by authMiddleware
-  const userId = req.userId;
+  /**
+   * GET /api/v1/auth/cas/login
+   * Redirect to CAS login page
+   */
+  casLogin = asyncHandler(async (req, res) => {
+    const serviceUrl = casConfig.serviceUrl || `${req.protocol}://${req.get('host')}/api/v1/auth/cas/callback`;
+    const casLoginUrl = CASService.generateLoginUrl(serviceUrl);
+    
+    res.redirect(casLoginUrl);
+  });
 
-  const user = await UserService.getUserById(userId);
+  /**
+   * GET /api/v1/auth/cas/callback
+   * Handle CAS callback and validate ticket
+   */
+  casCallback = asyncHandler(async (req, res) => {
+    const { ticket } = req.query;
+    const serviceUrl = casConfig.serviceUrl || `${req.protocol}://${req.get('host')}/api/v1/auth/cas/callback`;
 
-  res.status(200).json({
-    success: true,
-    data: {
-      userId: user._id,
-      email: user.email,
-      fullName: user.fullName,
-      role: user.role,
-      status: user.status,
-      mssv: user.mssv,
-      maCB: user.maCB,
-      student: user.student || null,
-      tutor: user.tutor || null
+    if (!ticket) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing CAS ticket'
+      });
+    }
+
+    // Validate ticket with CAS server
+    const casUser = await CASService.validateTicket(ticket, serviceUrl);
+
+    // Sync user data and generate JWT
+    const result = await AuthService.loginWithCAS(casUser);
+
+    // Set JWT in HTTP-only cookie
+    res.cookie('jwt', result.token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+    });
+
+    // Redirect to frontend or return JSON
+    if (process.env.FRONTEND_URL) {
+      res.redirect(`${process.env.FRONTEND_URL}/dashboard?token=${result.token}`);
+    } else {
+      res.status(200).json({
+        success: true,
+        data: result.user,
+        token: result.token,
+        message: 'CAS login successful'
+      });
     }
   });
-});
+}
 
-export {
-  login,
-  handleCallback,
-  logout,
-  getCurrentUser,
-  casLogin,
-  casCallback
-};
-
-/**
- * ============================================================
- * CAS AUTHENTICATION HANDLERS
- * ============================================================
- */
+export default new AuthController();
 
 /**
  * GET /api/v1/auth/cas/login

@@ -172,4 +172,29 @@
 // - Validate ownership
 // - Update fields
 
-// TODO: Export controller functions
+import { asyncHandler } from '../middleware/errorMiddleware.js';
+
+class RecordController {
+  createSessionReport = asyncHandler(async (req, res) => {
+    res.status(501).json({
+      success: false,
+      message: 'createSessionReport - Not implemented yet'
+    });
+  });
+
+  getSessionReport = asyncHandler(async (req, res) => {
+    res.status(501).json({
+      success: false,
+      message: 'getSessionReport - Not implemented yet'
+    });
+  });
+
+  updateSessionReport = asyncHandler(async (req, res) => {
+    res.status(501).json({
+      success: false,
+      message: 'updateSessionReport - Not implemented yet'
+    });
+  });
+}
+
+export default new RecordController();

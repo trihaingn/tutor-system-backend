@@ -124,103 +124,101 @@ import * as CourseRegistrationService from '../services/registration/CourseRegis
 import StudentRepository from '../repositories/StudentRepository.js';
 import { asyncHandler, ValidationError } from '../middleware/errorMiddleware.js';
 
-/**
- * POST /api/v1/registrations
- * Student registers with Tutor for a subject (UC-08)
- */
-const registerCourse = asyncHandler(async (req, res) => {
-  const { tutorId, subjectId } = req.body;
-  
-  // Validation
-  if (!tutorId || !subjectId) {
-    throw new ValidationError('tutorId and subjectId are required');
-  }
-
-  // Get studentId from authenticated user
-  const userId = req.userId;
-  const student = await StudentRepository.findByUserId(userId);
-  
-  if (!student) {
-    throw new ValidationError('User is not a student');
-  }
-
-  // Call service to register course
-  const registration = await CourseRegistrationService.registerCourse(
-    student._id,
-    tutorId,
-    subjectId
-  );
-
-  res.status(201).json({
-    success: true,
-    data: {
-      registrationId: registration._id,
-      studentId: registration.studentId,
-      tutorId: registration.tutorId,
-      subjectId: registration.subjectId,
-      status: registration.status,
-      registeredAt: registration.registeredAt,
-      message: 'Registration successful! You can now book appointments.'
+class RegistrationController {
+  /**
+   * POST /api/v1/registrations
+   * Student registers with Tutor for a subject (UC-08)
+   */
+  registerCourse = asyncHandler(async (req, res) => {
+    const { tutorId, subjectId } = req.body;
+    
+    // Validation
+    if (!tutorId || !subjectId) {
+      throw new ValidationError('tutorId and subjectId are required');
     }
+
+    // Get studentId from authenticated user
+    const userId = req.userId;
+    const student = await StudentRepository.findByUserId(userId);
+    
+    if (!student) {
+      throw new ValidationError('User is not a student');
+    }
+
+    // Call service to register course
+    const registration = await CourseRegistrationService.registerStudentWithTutor(
+      student._id,
+      tutorId,
+      subjectId
+    );
+
+    res.status(201).json({
+      success: true,
+      data: {
+        registrationId: registration._id,
+        studentId: registration.studentId,
+        tutorId: registration.tutorId,
+        subjectId: registration.subjectId,
+        status: registration.status,
+        registeredAt: registration.registeredAt,
+        message: 'Registration successful! You can now book appointments.'
+      }
+    });
   });
-});
 
-/**
- * GET /api/v1/registrations/me
- * Student views own registrations
- */
-const getMyRegistrations = asyncHandler(async (req, res) => {
-  const { status, subjectId } = req.query;
-  
-  // Get studentId from authenticated user
-  const userId = req.userId;
-  const student = await StudentRepository.findByUserId(userId);
-  
-  if (!student) {
-    throw new ValidationError('User is not a student');
-  }
+  /**
+   * GET /api/v1/registrations/me
+   * Student views own registrations
+   */
+  getMyRegistrations = asyncHandler(async (req, res) => {
+    const { status, subjectId } = req.query;
+    
+    // Get studentId from authenticated user
+    const userId = req.userId;
+    const student = await StudentRepository.findByUserId(userId);
+    
+    if (!student) {
+      throw new ValidationError('User is not a student');
+    }
 
-  const filters = {};
-  if (status) filters.status = status;
-  if (subjectId) filters.subjectId = subjectId;
+    const filters = {};
+    if (status) filters.status = status;
+    if (subjectId) filters.subjectId = subjectId;
 
-  const registrations = await CourseRegistrationService.getStudentRegistrations(
-    student._id,
-    filters
-  );
+    const registrations = await CourseRegistrationService.getStudentRegistrations(
+      student._id,
+      filters
+    );
 
-  res.status(200).json({
-    success: true,
-    data: registrations
+    res.status(200).json({
+      success: true,
+      data: registrations
+    });
   });
-});
 
-/**
- * DELETE /api/v1/registrations/:id
- * Student cancels registration
- */
-const cancelRegistration = asyncHandler(async (req, res) => {
-  const { id } = req.params;
-  
-  // Get studentId from authenticated user
-  const userId = req.userId;
-  const student = await StudentRepository.findByUserId(userId);
-  
-  if (!student) {
-    throw new ValidationError('User is not a student');
-  }
+  /**
+   * DELETE /api/v1/registrations/:id
+   * Student cancels registration
+   */
+  cancelRegistration = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    
+    // Get studentId from authenticated user
+    const userId = req.userId;
+    const student = await StudentRepository.findByUserId(userId);
+    
+    if (!student) {
+      throw new ValidationError('User is not a student');
+    }
 
-  const result = await CourseRegistrationService.cancelRegistration(id, student._id);
+    const result = await CourseRegistrationService.cancelRegistration(id, student._id);
 
-  res.status(200).json({
-    success: true,
-    message: 'Registration cancelled successfully',
-    data: result.registration
+    res.status(200).json({
+      success: true,
+      message: 'Registration cancelled successfully',
+      data: result.registration
+    });
   });
-});
+}
 
-export {
-  registerCourse,
-  getMyRegistrations,
-  cancelRegistration
-};
+export default new RegistrationController();

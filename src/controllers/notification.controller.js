@@ -155,4 +155,36 @@
 // - Count unread notifications
 // - Return count for badge
 
-// TODO: Export controller functions
+import { asyncHandler } from '../middleware/errorMiddleware.js';
+
+class NotificationController {
+  getNotifications = asyncHandler(async (req, res) => {
+    res.status(501).json({
+      success: false,
+      message: 'getNotifications - Not implemented yet'
+    });
+  });
+
+  markAsRead = asyncHandler(async (req, res) => {
+    res.status(501).json({
+      success: false,
+      message: 'markAsRead - Not implemented yet'
+    });
+  });
+
+  markAllAsRead = asyncHandler(async (req, res) => {
+    res.status(501).json({
+      success: false,
+      message: 'markAllAsRead - Not implemented yet'
+    });
+  });
+
+  getUnreadCount = asyncHandler(async (req, res) => {
+    res.status(501).json({
+      success: false,
+      message: 'getUnreadCount - Not implemented yet'
+    });
+  });
+}
+
+export default new NotificationController();

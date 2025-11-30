@@ -204,23 +204,26 @@ async function validateSSOTicket(ticket, service) {
  */
 async function syncAndCreateUser(ssoUserInfo) {
   let datacoreData = null;
-  let role = 'STUDENT'; // Default role
+  // Use role from ssoUserInfo if already set (from loginWithCAS), otherwise default to STUDENT
+  let role = ssoUserInfo.role || 'STUDENT';
   let tutorType = null;
 
-  // BR-007: Sync from DATACORE
-  try {
-    if (ssoUserInfo.mssv) {
-      // Student - sync from DATACORE
-      datacoreData = await DatacoreService.getStudentData(ssoUserInfo.mssv);
-      role = 'STUDENT';
-    } else if (ssoUserInfo.maCB) {
-      // Staff/Lecturer - sync from DATACORE
-      datacoreData = await DatacoreService.getTutorData(ssoUserInfo.maCB);
-      role = DatacoreService.mapRole(datacoreData?.role || 'TUTOR');
-      tutorType = DatacoreService.mapTutorType(datacoreData?.role);
+  // BR-007: Sync from DATACORE (only if role not already determined)
+  if (!ssoUserInfo.role) {
+    try {
+      if (ssoUserInfo.mssv) {
+        // Student - sync from DATACORE
+        datacoreData = await DatacoreService.getStudentData(ssoUserInfo.mssv);
+        role = 'STUDENT';
+      } else if (ssoUserInfo.maCB) {
+        // Staff/Lecturer - sync from DATACORE
+        datacoreData = await DatacoreService.getTutorData(ssoUserInfo.maCB);
+        role = DatacoreService.mapRole(datacoreData?.role || 'TUTOR');
+        tutorType = DatacoreService.mapTutorType(datacoreData?.role);
+      }
+    } catch (error) {
+      console.warn('DATACORE sync failed, using SSO data only:', error.message);
     }
-  } catch (error) {
-    console.warn('DATACORE sync failed, using SSO data only:', error.message);
   }
 
   // Merge SSO + DATACORE data
@@ -237,11 +240,11 @@ async function syncAndCreateUser(ssoUserInfo) {
   // Create or update User
   const user = await UserService.createOrUpdateUser(userData);
 
-  // Create or update Student profile
-  if (role === 'STUDENT' && ssoUserInfo.mssv) {
+  // Create or update Student profile (always create if STUDENT role)
+  if (role === 'STUDENT') {
     const studentData = {
-      mssv: ssoUserInfo.mssv,
-      major: datacoreData?.major || ssoUserInfo.faculty,
+      mssv: ssoUserInfo.mssv || null,
+      major: datacoreData?.major || ssoUserInfo.major || ssoUserInfo.faculty,
       enrollmentYear: datacoreData?.enrollmentYear || new Date().getFullYear(),
       currentYear: datacoreData?.currentYear || 1,
       gpa: datacoreData?.gpa || 0,
@@ -250,10 +253,10 @@ async function syncAndCreateUser(ssoUserInfo) {
     await UserService.createOrUpdateStudent(user._id, studentData);
   }
 
-  // Create or update Tutor profile
-  if ((role === 'TUTOR' || role === 'ADMIN') && ssoUserInfo.maCB) {
+  // Create or update Tutor profile (always create if TUTOR or ADMIN role)
+  if (role === 'TUTOR' || role === 'ADMIN') {
     const tutorData = {
-      maCB: ssoUserInfo.maCB,
+      maCB: ssoUserInfo.maCB || null,
       type: tutorType || 'LECTURER',
       expertise: datacoreData?.expertise || [],
       bio: datacoreData?.bio || ''
@@ -343,11 +346,90 @@ async function logout() {
   return { success: true, message: 'Logged out successfully' };
 }
 
+/**
+ * Login with CAS (for CAS-validated users)
+ * Used after CAS ticket has already been validated
+ * @param {Object} casUser - User data from CAS validation
+ * @returns {Object} - { user, token }
+ */
+async function loginWithCAS(casUser) {
+  // CAS user format: { id, username, email }
+  let datacoreData = null;
+  let role = 'STUDENT'; // Default role
+  let mssv = null;
+  let maCB = null;
+  
+  // Try to get full user info from DATACORE by username
+  try {
+    datacoreData = await DatacoreService.getUserInfo(casUser.username);
+    
+    // Determine role based on user_type
+    if (datacoreData.user_type === 'student') {
+      role = 'STUDENT';
+      mssv = datacoreData.student_id;
+    } else if (datacoreData.user_type === 'lecturer') {
+      role = 'TUTOR';
+      maCB = datacoreData.staff_id;
+    } else if (datacoreData.user_type === 'staff') {
+      role = 'ADMIN';
+      maCB = datacoreData.staff_id;
+    }
+    
+    console.log(`DATACORE sync successful for ${casUser.username}:`, {
+      user_type: datacoreData.user_type,
+      student_id: datacoreData.student_id,
+      staff_id: datacoreData.staff_id
+    });
+  } catch (error) {
+    console.warn('DATACORE sync failed, using CAS data only:', error.message);
+  }
+
+  // Convert to our user format
+  const userInfo = {
+    email: casUser.email,
+    username: casUser.username,
+    casUserId: casUser.id,
+    fullName: datacoreData?.full_name || casUser.username.split('.').map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1)
+    ).join(' '),
+    faculty: datacoreData?.faculty || null,
+    mssv: mssv,
+    maCB: maCB,
+    role: role,
+    // Additional student data
+    major: datacoreData?.major || null,
+    department: datacoreData?.department || null
+  };
+
+  // Sync DATACORE and create/update User
+  const user = await syncAndCreateUser(userInfo);
+
+  // Generate JWT
+  const token = generateJWT(user);
+
+  // Return user + token
+  return {
+    user: {
+      userId: user._id,
+      email: user.email,
+      fullName: user.fullName,
+      role: user.role,
+      status: user.status,
+      mssv: user.mssv,
+      maCB: user.maCB,
+      student: user.student || null,
+      tutor: user.tutor || null
+    },
+    token
+  };
+}
+
 export {
   validateSSOTicket,
   syncAndCreateUser,
   generateJWT,
   verifyJWT,
   login,
+  loginWithCAS,
   logout
 };

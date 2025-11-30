@@ -13,7 +13,7 @@
 
 import express from 'express';
 const router = express.Router();
-import * as feedbackController from '../controllers/feedback-rating.controller.js';
+import feedbackController from '../controllers/feedback-rating.controller.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 import { roleMiddleware } from '../middleware/roleMiddleware.js';
 

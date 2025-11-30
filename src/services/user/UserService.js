@@ -156,10 +156,14 @@ import { NotFoundError } from '../../utils/error.js';
 async function createOrUpdateUser(userData) {
   let user = await UserRepository.findOne({ email: userData.email });
 
+  // Set hcmutId: use mssv, maCB, or email as fallback
+  const hcmutId = userData.mssv || userData.maCB || userData.email.split('@')[0];
+
   if (user) {
     // Update existing user
     const updateData = {
       ...userData,
+      hcmutId: hcmutId,
       lastSyncAt: new Date()
     };
     user = await UserRepository.update(user._id, updateData);
@@ -167,6 +171,7 @@ async function createOrUpdateUser(userData) {
     // Create new user
     user = await UserRepository.create({
       ...userData,
+      hcmutId: hcmutId,
       lastSyncAt: new Date(),
       syncSource: 'DATACORE'
     });
@@ -189,12 +194,12 @@ async function createOrUpdateStudent(userId, studentData) {
     student = await StudentRepository.create({
       userId,
       ...studentData,
-      registeredTutors: 0,
-      totalSessionsAttended: 0,
-      totalAppointments: 0,
-      completedAppointments: 0,
-      cancelledAppointments: 0,
-      averageRatingGiven: 0
+      registeredTutors: [],
+      stats: {
+        totalSessionAttended: 0,
+        completedSessionAttended: 0,
+        cancelledSessionAttended: 0
+      }
     });
   }
 
@@ -214,13 +219,18 @@ async function createOrUpdateTutor(userId, tutorData) {
     // Create new tutor with default statistics
     tutor = await TutorRepository.create({
       userId,
-      ...tutorData,
-      totalStudents: 0,
-      totalSessions: 0,
-      completedSessions: 0,
-      averageRating: 0,
-      totalReviews: 0,
-      isAcceptingStudents: true
+      subjects: tutorData.subjects || tutorData.expertise || [],
+      bio: tutorData.bio || '',
+      maxStudents: tutorData.maxStudents || 200,
+      isAcceptingStudents: true,
+      stats: {
+        totalStudents: 0,
+        totalSessions: 0,
+        completedSessions: 0,
+        cancelledSessions: 0,
+        averageRating: 0,
+        totalReviews: 0
+      }
     });
   }
 

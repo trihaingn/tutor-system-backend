@@ -165,9 +165,9 @@
 // }
 
 // ============================================================
-// FUNCTION: getMyEvaluations()
+// FUNCTION: getMyFeedbacks()
 // ============================================================
-// METHOD: GET /api/v1/tutors/me/evaluations
+// METHOD: GET /api/v1/tutors/me/feedbacks
 // PURPOSE: Tutor xem evaluations received (UC-22)
 // 
 // REQUEST:
@@ -204,47 +204,282 @@
 import * as TutorService from '../services/user/TutorService.js';
 import { asyncHandler } from '../middleware/errorMiddleware.js';
 
-/**
- * GET /api/v1/tutors/search
- * Student searches for Tutors by subject (UC-07)
- */
-const searchTutors = asyncHandler(async (req, res) => {
-  const { subjectId, type, minRating, isAcceptingStudents, page, limit } = req.query;
+class TutorController {
+  /**
+   * GET /api/v1/tutors/search
+   * Student searches for Tutors by subject (UC-07)
+   */
+  searchTutors = asyncHandler(async (req, res) => {
+    const { subjectId, type, minRating, isAcceptingStudents, page, limit } = req.query;
 
-  const searchCriteria = {
-    subjectId,
-    type,
-    minRating: minRating ? parseFloat(minRating) : undefined,
-    isAcceptingStudents: isAcceptingStudents !== undefined ? isAcceptingStudents === 'true' : undefined,
-    page: page ? parseInt(page) : 1,
-    limit: limit ? parseInt(limit) : 20
-  };
+    const searchCriteria = {
+      subjectId,
+      type,
+      minRating: minRating ? parseFloat(minRating) : undefined,
+      isAcceptingStudents: isAcceptingStudents !== undefined ? isAcceptingStudents === 'true' : undefined,
+      page: page ? parseInt(page) : 1,
+      limit: limit ? parseInt(limit) : 20
+    };
 
-  const result = await TutorService.searchTutors(searchCriteria);
+    const result = await TutorService.searchTutors(searchCriteria);
 
-  res.status(200).json({
-    success: true,
-    data: result.data,
-    pagination: result.pagination
+    res.status(200).json({
+      success: true,
+      data: result.data,
+      pagination: result.pagination
+    });
   });
-});
 
-/**
- * GET /api/v1/tutors/:id
- * Get Tutor details (public view)
- */
-const getTutorDetails = asyncHandler(async (req, res) => {
-  const { id } = req.params;
+  /**
+   * GET /api/v1/tutors/:id
+   * Get Tutor details (public view)
+   */
+  getTutorDetails = asyncHandler(async (req, res) => {
+    const { id } = req.params;
 
-  const tutor = await TutorService.getTutorDetails(id);
+    const tutor = await TutorService.getTutorDetails(id);
 
-  res.status(200).json({
-    success: true,
-    data: tutor
+    res.status(200).json({
+      success: true,
+      data: tutor
+    });
   });
-});
 
-export {
-  searchTutors,
-  getTutorDetails
-};
+  /**
+   * GET /api/v1/tutors/by-hcmut-id/:hcmutId
+   * Get Tutor by HCMUT ID (maCB/staff_id)
+   */
+  getTutorByHcmutId = asyncHandler(async (req, res) => {
+    const { hcmutId } = req.params;
+    const { NotFoundError } = await import('../middleware/errorMiddleware.js');
+
+    // Find User by hcmutId
+    const User = (await import('../models/User.model.js')).default;
+    const user = await User.findOne({ hcmutId }).lean();
+
+    if (!user) {
+      throw new NotFoundError(`User with hcmutId '${hcmutId}' not found`);
+    }
+
+    // Find Tutor by userId
+    const Tutor = (await import('../models/Tutor.model.js')).default;
+    const tutor = await Tutor.findOne({ userId: user._id })
+      .populate('userId', 'email fullName faculty hcmutId role status')
+      .lean();
+
+    if (!tutor) {
+      throw new NotFoundError(`Tutor profile not found for user with hcmutId '${hcmutId}'`);
+    }
+
+    res.status(200).json({
+      success: true,
+      data: tutor
+    });
+  });
+
+  /**
+   * GET /api/v1/tutors/me
+   * Tutor views own profile (UC-20)
+   */
+  getMyProfile = asyncHandler(async (req, res) => {
+    const userId = req.userId;
+    const { NotFoundError } = await import('../middleware/errorMiddleware.js');
+
+    // Find tutor profile
+    const Tutor = (await import('../models/Tutor.model.js')).default;
+    const tutor = await Tutor.findOne({ userId })
+      .populate('userId', 'email fullName faculty hcmutId role status')
+      .lean();
+
+    if (!tutor) {
+      throw new NotFoundError('Tutor profile not found');
+    }
+
+    res.status(200).json({
+      success: true,
+      data: tutor
+    });
+  });
+
+  /**
+   * GET /api/v1/tutors/me/sessions
+   * Tutor views own sessions (UC-21)
+   */
+  getMySessions = asyncHandler(async (req, res) => {
+    const userId = req.userId;
+    const { NotFoundError } = await import('../middleware/errorMiddleware.js');
+
+    // Find tutor profile
+    const Tutor = (await import('../models/Tutor.model.js')).default;
+    const tutor = await Tutor.findOne({ userId }).lean();
+
+    if (!tutor) {
+      throw new NotFoundError('Tutor profile not found');
+    }
+
+    // Query sessions with pagination
+    const TutorSession = (await import('../models/TutorSession.model.js')).default;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const filter = { tutorId: tutor._id };
+
+    // Filter by status if provided
+    if (req.query.status) {
+      filter.status = req.query.status;
+    }
+
+    const [sessions, total] = await Promise.all([
+      TutorSession.find(filter)
+        .populate('participants.studentId', 'userId')
+        .sort({ startTime: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      TutorSession.countDocuments(filter)
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: sessions,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+  });
+
+  /**
+   * GET /api/v1/tutors/me/feedbacks
+   * Tutor views feedbacks received (UC-22)
+   */
+  getMyFeedbacks = asyncHandler(async (req, res) => {
+    const userId = req.userId;
+    const { NotFoundError } = await import('../middleware/errorMiddleware.js');
+
+    // Find tutor profile
+    const Tutor = (await import('../models/Tutor.model.js')).default;
+    const tutor = await Tutor.findOne({ userId }).lean();
+
+    if (!tutor) {
+      throw new NotFoundError('Tutor profile not found');
+    }
+
+    // Query feedbacks with pagination
+    const StudentFeedback = (await import('../models/StudentFeedback.model.js')).default;
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const filter = { tutorId: tutor._id };
+
+    // Filter by rating if provided
+    if (req.query.rating) {
+      filter.rating = parseInt(req.query.rating);
+    }
+
+    const [feedbacks, total] = await Promise.all([
+      StudentFeedback.find(filter)
+        .populate('studentId', 'userId')
+        .populate({
+          path: 'studentId',
+          populate: {
+            path: 'userId',
+            select: 'fullName email'
+          }
+        })
+        .populate('sessionId', 'title subject startTime endTime status')
+        .sort({ evaluatedAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      StudentFeedback.countDocuments(filter)
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: feedbacks,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
+    });
+  });
+
+  /**
+   * GET /api/v1/tutors/:tutorId/availability
+   * Get tutor availability schedule by MongoDB ObjectId
+   */
+  getTutorAvailability = asyncHandler(async (req, res) => {
+    const { tutorId } = req.params;
+    const { NotFoundError } = await import('../middleware/errorMiddleware.js');
+
+    // Verify tutor exists
+    const Tutor = (await import('../models/Tutor.model.js')).default;
+    const tutor = await Tutor.findById(tutorId).lean();
+
+    if (!tutor) {
+      throw new NotFoundError('Tutor not found');
+    }
+
+    // Get availability schedule
+    const Availability = (await import('../models/Availability.model.js')).default;
+    const availability = await Availability.find({
+      tutorId: tutorId,
+      isActive: true
+    })
+      .sort({ dayOfWeek: 1, startTime: 1 })
+      .lean();
+
+    res.status(200).json({
+      success: true,
+      data: availability
+    });
+  });
+
+  /**
+   * GET /api/v1/tutors/by-hcmut-id/:hcmutId/availability
+   * Get tutor availability by HCMUT ID
+   */
+  getTutorAvailabilityByHcmutId = asyncHandler(async (req, res) => {
+    const { hcmutId } = req.params;
+    const { NotFoundError } = await import('../middleware/errorMiddleware.js');
+
+    // Find User by hcmutId
+    const User = (await import('../models/User.model.js')).default;
+    const user = await User.findOne({ hcmutId }).lean();
+
+    if (!user) {
+      throw new NotFoundError(`User with hcmutId '${hcmutId}' not found`);
+    }
+
+    // Find Tutor by userId
+    const Tutor = (await import('../models/Tutor.model.js')).default;
+    const tutor = await Tutor.findOne({ userId: user._id }).lean();
+
+    if (!tutor) {
+      throw new NotFoundError(`Tutor profile not found for user with hcmutId '${hcmutId}'`);
+    }
+
+    // Get availability schedule
+    const Availability = (await import('../models/Availability.model.js')).default;
+    const availability = await Availability.find({
+      tutorId: tutor._id,
+      isActive: true
+    })
+      .sort({ dayOfWeek: 1, startTime: 1 })
+      .lean();
+
+    res.status(200).json({
+      success: true,
+      data: availability
+    });
+  });
+}
+
+export default new TutorController();

@@ -174,4 +174,36 @@
 // - Validate ownership
 // - Delete or deactivate
 
-// TODO: Export controller functions
+import { asyncHandler } from '../middleware/errorMiddleware.js';
+
+class ScheduleController {
+  setAvailability = asyncHandler(async (req, res) => {
+    res.status(501).json({
+      success: false,
+      message: 'setAvailability - Not implemented yet'
+    });
+  });
+
+  getMyAvailability = asyncHandler(async (req, res) => {
+    res.status(501).json({
+      success: false,
+      message: 'getMyAvailability - Not implemented yet'
+    });
+  });
+
+  updateAvailability = asyncHandler(async (req, res) => {
+    res.status(501).json({
+      success: false,
+      message: 'updateAvailability - Not implemented yet'
+    });
+  });
+
+  deleteAvailability = asyncHandler(async (req, res) => {
+    res.status(501).json({
+      success: false,
+      message: 'deleteAvailability - Not implemented yet'
+    });
+  });
+}
+
+export default new ScheduleController();
