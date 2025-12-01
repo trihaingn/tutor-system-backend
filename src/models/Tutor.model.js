@@ -11,8 +11,8 @@ const TutorSchema = new mongoose.Schema(
       index: true
     },
     
-    // Subjects taught
-    subjects: {
+    // Subjects taught (identifiers)
+    subjectIds: {
       type: [String],
       default: []
     },

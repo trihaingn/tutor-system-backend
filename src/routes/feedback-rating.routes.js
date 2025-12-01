@@ -107,6 +107,47 @@ import { roleMiddleware } from '../middleware/roleMiddleware.js';
 // ROUTES IMPLEMENTATION
 // ============================================================
 
+/**
+ * @swagger
+ * /evaluations/student:
+ *   post:
+ *     summary: Student evaluates session (UC-26)
+ *     tags: [Feedback & Rating]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [sessionId, tutorId, rating]
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *                 example: "507f1f77bcf86cd799439011"
+ *               tutorId:
+ *                 type: string
+ *                 example: "507f1f77bcf86cd799439022"
+ *               rating:
+ *                 type: integer
+ *                 minimum: 1
+ *                 maximum: 5
+ *                 example: 5
+ *                 description: Rating must be integer 1-5 (BR-010)
+ *               content:
+ *                 type: string
+ *                 example: "Buổi học rất hay, thầy giảng rất dễ hiểu!"
+ *     responses:
+ *       201:
+ *         description: Feedback created successfully (auto-updates tutor rating)
+ *       400:
+ *         description: Session not COMPLETED (BR-009) or invalid rating (BR-010)
+ *       403:
+ *         description: Student not in session participants or only STUDENT allowed
+ *       409:
+ *         description: Duplicate feedback (already submitted)
+ */
 // POST /api/v1/evaluations/student - Student evaluates session (UC-26)
 router.post(
   '/student',
@@ -115,6 +156,44 @@ router.post(
   feedbackController.createStudentFeedback
 );
 
+/**
+ * @swagger
+ * /evaluations/tutor:
+ *   post:
+ *     summary: Tutor evaluates student (UC-27)
+ *     tags: [Feedback & Rating]
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [sessionId, studentId, rating]
+ *             properties:
+ *               sessionId:
+ *                 type: string
+ *               studentId:
+ *                 type: string
+ *               rating:
+ *                 type: integer
+ *                 minimum: 1
+ *                 maximum: 5
+ *                 description: Rating must be integer 1-5 (BR-010)
+ *               content:
+ *                 type: string
+ *                 example: "Sinh viên học tập tích cực, tiếp thu tốt"
+ *     responses:
+ *       201:
+ *         description: Tutor feedback created successfully
+ *       400:
+ *         description: Invalid rating or session not COMPLETED
+ *       403:
+ *         description: Not session owner or only TUTOR/ADMIN allowed
+ *       409:
+ *         description: Duplicate feedback
+ */
 // POST /api/v1/evaluations/tutor - Tutor evaluates student (UC-27)
 router.post(
   '/tutor',
@@ -123,6 +202,47 @@ router.post(
   feedbackController.createTutorFeedback
 );
 
+/**
+ * @swagger
+ * /evaluations/session/{sessionId}:
+ *   get:
+ *     summary: Get all evaluations for session (UC-28)
+ *     tags: [Feedback & Rating]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: sessionId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Session ID
+ *     responses:
+ *       200:
+ *         description: Both student and tutor feedbacks for session
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                 data:
+ *                   type: object
+ *                   properties:
+ *                     studentFeedbacks:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *                     tutorFeedbacks:
+ *                       type: array
+ *                       items:
+ *                         type: object
+ *       403:
+ *         description: Only session owner (tutor) or ADMIN allowed
+ *       404:
+ *         description: Session not found
+ */
 // GET /api/v1/evaluations/session/:sessionId - Get all evaluations for session (UC-28)
 router.get(
   '/session/:sessionId',

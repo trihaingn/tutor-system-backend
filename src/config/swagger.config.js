@@ -218,7 +218,7 @@ const swaggerDefinition = {
         }
       },
       // Session Schemas
-      Session: {
+      TutorSession: {
         type: 'object',
         properties: {
           _id: {
@@ -229,13 +229,100 @@ const swaggerDefinition = {
             type: 'string',
             example: '507f1f77bcf86cd799439011'
           },
-          studentId: {
+          title: {
             type: 'string',
-            example: '507f1f77bcf86cd799439012'
+            example: 'Math 101 - Derivatives'
           },
           subjectId: {
             type: 'string',
-            example: 'Math_101'
+            example: 'CNPM_NC',
+            description: 'Subject identifier (e.g., Math_101, CNPM_NC)'
+          },
+          description: {
+            type: 'string',
+            example: 'Advanced calculus concepts and practical examples'
+          },
+          startTime: {
+            type: 'string',
+            format: 'date-time',
+            example: '2024-01-15T14:00:00Z',
+            description: 'Must be on the hour (HH:00:00) per BR-001'
+          },
+          endTime: {
+            type: 'string',
+            format: 'date-time',
+            example: '2024-01-15T16:00:00Z',
+            description: 'Must be on the hour (HH:00:00) per BR-001'
+          },
+          duration: {
+            type: 'integer',
+            example: 120,
+            description: 'Duration in minutes (minimum 60 per BR-002)'
+          },
+          sessionType: {
+            type: 'string',
+            enum: ['ONLINE', 'OFFLINE'],
+            example: 'OFFLINE'
+          },
+          location: {
+            type: 'string',
+            example: 'H6-201',
+            description: 'Physical location (OFFLINE) or meeting link (ONLINE)'
+          },
+          participants: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                studentId: {
+                  type: 'string',
+                  example: '507f1f77bcf86cd799439012'
+                },
+                registeredAt: {
+                  type: 'string',
+                  format: 'date-time'
+                },
+                attended: {
+                  type: 'boolean',
+                  default: false
+                }
+              }
+            }
+          },
+          status: {
+            type: 'string',
+            enum: ['SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'],
+            example: 'SCHEDULED'
+          },
+          hasReport: {
+            type: 'boolean',
+            default: false
+          },
+          createdAt: {
+            type: 'string',
+            format: 'date-time'
+          },
+          updatedAt: {
+            type: 'string',
+            format: 'date-time'
+          }
+        }
+      },
+      CreateSessionRequest: {
+        type: 'object',
+        required: ['title', 'subjectId', 'startTime', 'endTime', 'sessionType', 'location'],
+        properties: {
+          title: {
+            type: 'string',
+            example: 'Hướng dẫn Công nghệ phần mềm'
+          },
+          subjectId: {
+            type: 'string',
+            example: 'CNPM_NC'
+          },
+          description: {
+            type: 'string',
+            example: 'Hướng dẫn về design patterns và best practices'
           },
           startTime: {
             type: 'string',
@@ -247,14 +334,15 @@ const swaggerDefinition = {
             format: 'date-time',
             example: '2024-01-15T16:00:00Z'
           },
+          sessionType: {
+            type: 'string',
+            enum: ['ONLINE', 'OFFLINE'],
+            example: 'OFFLINE'
+          },
           location: {
             type: 'string',
-            example: 'H6-201'
-          },
-          status: {
-            type: 'string',
-            enum: ['SCHEDULED', 'COMPLETED', 'CANCELLED'],
-            example: 'SCHEDULED'
+            example: 'H6-201',
+            description: 'Physical room (OFFLINE) or meeting link (ONLINE)'
           }
         }
       }

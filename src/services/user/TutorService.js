@@ -28,13 +28,13 @@
 //   query = {}
 //   
 //   - If searchCriteria.subjectId:
-//     → query['expertise.subjectId'] = searchCriteria.subjectId
+//     → query.subjectIds = searchCriteria.subjectId (array contains)
 //   
 //   - If searchCriteria.type:
 //     → query.type = searchCriteria.type
 //   
 //   - If searchCriteria.minRating:
-//     → query.averageRating = { $gte: searchCriteria.minRating }
+//     → query['stats.averageRating'] = { $gte: searchCriteria.minRating }
 //   
 //   - If searchCriteria.isAcceptingStudents !== undefined:
 //     → query.isAcceptingStudents = searchCriteria.isAcceptingStudents
@@ -49,7 +49,7 @@
 // Step 3: Query với populate
 //   - const tutors = await Tutor.find(query)
 //       .populate('userId', 'fullName email faculty')
-//       .sort({ averageRating: -1, totalReviews: -1 }) // Sort by rating DESC
+//       .sort({ 'stats.averageRating': -1, 'stats.totalReviews': -1 }) // Sort by rating DESC
 //       .skip(skip)
 //       .limit(limit)
 // 
@@ -168,7 +168,7 @@ async function searchTutors(searchCriteria) {
   const query = {};
   
   if (searchCriteria.subjectId) {
-    query['expertise.subjectId'] = searchCriteria.subjectId;
+    query.subjectIds = searchCriteria.subjectId;
   }
   
   if (searchCriteria.type) {
@@ -176,7 +176,7 @@ async function searchTutors(searchCriteria) {
   }
   
   if (searchCriteria.minRating) {
-    query.averageRating = { $gte: searchCriteria.minRating };
+    query['stats.averageRating'] = { $gte: searchCriteria.minRating };
   }
   
   if (searchCriteria.isAcceptingStudents !== undefined) {
@@ -190,7 +190,7 @@ async function searchTutors(searchCriteria) {
   const options = {
     skip: (page - 1) * limit,
     limit: limit,
-    sort: { averageRating: -1, totalReviews: -1 }
+    sort: { 'stats.averageRating': -1, 'stats.totalReviews': -1 }
   };
 
   const tutors = await TutorRepository.findAll(query, options);
@@ -244,16 +244,14 @@ async function getTutorDetails(tutorId) {
       email: user.email,
       faculty: user.faculty
     } : null,
-    maCB: tutor.maCB,
-    type: tutor.type,
-    expertise: tutor.expertise,
+    subjectIds: tutor.subjectIds,
     bio: tutor.bio,
     statistics: {
-      totalStudents: tutor.totalStudents,
-      totalSessions: tutor.totalSessions,
-      completedSessions: tutor.completedSessions,
-      averageRating: tutor.averageRating,
-      totalReviews: tutor.totalReviews
+      totalStudents: tutor.stats.totalStudents,
+      totalSessions: tutor.stats.totalSessions,
+      completedSessions: tutor.stats.completedSessions,
+      averageRating: tutor.stats.averageRating,
+      totalReviews: tutor.stats.totalReviews
     },
     isAcceptingStudents: tutor.isAcceptingStudents
   };

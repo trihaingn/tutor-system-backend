@@ -172,27 +172,182 @@
 // - Validate ownership
 // - Update fields
 
-import { asyncHandler } from '../middleware/errorMiddleware.js';
+import { asyncHandler, NotFoundError, ValidationError } from '../middleware/errorMiddleware.js';
 
 class RecordController {
+  /**
+   * POST /api/v1/records/:sessionId
+   * Create session report (UC-18)
+   */
   createSessionReport = asyncHandler(async (req, res) => {
-    res.status(501).json({
-      success: false,
-      message: 'createSessionReport - Not implemented yet'
+    const userId = req.userId;
+    const { sessionId } = req.params;
+    const { summary } = req.body;
+    const { ForbiddenError, ConflictError } = await import('../middleware/errorMiddleware.js');
+
+    if (!summary) {
+      throw new ValidationError('Summary is required');
+    }
+
+    // Find tutor profile
+    const Tutor = (await import('../models/Tutor.model.js')).default;
+    const tutor = await Tutor.findOne({ userId });
+
+    if (!tutor) {
+      throw new NotFoundError('Tutor profile not found');
+    }
+
+    // Find session
+    const TutorSession = (await import('../models/TutorSession.model.js')).default;
+    const session = await TutorSession.findById(sessionId);
+
+    if (!session) {
+      throw new NotFoundError('Session not found');
+    }
+
+    // Validate session status
+    if (session.status !== 'COMPLETED') {
+      throw new ForbiddenError('Can only create report for completed sessions');
+    }
+
+    // Validate ownership
+    if (session.tutorId.toString() !== tutor._id.toString()) {
+      throw new ForbiddenError('You can only create reports for your own sessions');
+    }
+
+    // Check if report already exists
+    const Record = (await import('../models/Record.model.js')).default;
+    const existingReport = await Record.findOne({ sessionId });
+
+    if (existingReport) {
+      throw new ConflictError('Report already exists for this session');
+    }
+
+    // Create report
+    const report = await Record.create({
+      sessionId,
+      tutorId: tutor._id,
+      summary
+    });
+
+    // Update session hasReport flag
+    session.hasReport = true;
+    await session.save();
+
+    res.status(201).json({
+      success: true,
+      data: report
     });
   });
 
+  /**
+   * GET /api/v1/records/:sessionId
+   * Get session report
+   */
   getSessionReport = asyncHandler(async (req, res) => {
-    res.status(501).json({
-      success: false,
-      message: 'getSessionReport - Not implemented yet'
+    const userId = req.userId;
+    const userRole = req.userRole;
+    const { sessionId } = req.params;
+    const { ForbiddenError } = await import('../middleware/errorMiddleware.js');
+
+    // Find session
+    const TutorSession = (await import('../models/TutorSession.model.js')).default;
+    const session = await TutorSession.findById(sessionId);
+
+    if (!session) {
+      throw new NotFoundError('Session not found');
+    }
+
+    // Validate access
+    if (userRole === 'STUDENT') {
+      const Student = (await import('../models/Student.model.js')).default;
+      const student = await Student.findOne({ userId });
+      
+      if (!student) {
+        throw new ForbiddenError('Student profile not found');
+      }
+
+      // Check if student attended
+      const attended = session.participants.some(
+        p => p.studentId.toString() === student._id.toString()
+      );
+
+      if (!attended) {
+        throw new ForbiddenError('You can only view reports for sessions you attended');
+      }
+    } else if (userRole === 'TUTOR') {
+      const Tutor = (await import('../models/Tutor.model.js')).default;
+      const tutor = await Tutor.findOne({ userId });
+      
+      if (!tutor || session.tutorId.toString() !== tutor._id.toString()) {
+        throw new ForbiddenError('You can only view your own session reports');
+      }
+    }
+    // ADMIN can view all reports
+
+    // Find report
+    const Record = (await import('../models/Record.model.js')).default;
+    const report = await Record.findOne({ sessionId })
+      .populate('tutorId', 'userId subjects')
+      .populate({
+        path: 'tutorId',
+        populate: {
+          path: 'userId',
+          select: 'fullName email'
+        }
+      })
+      .populate('sessionId', 'title subject startTime endTime status')
+      .lean();
+
+    if (!report) {
+      throw new NotFoundError('Report not found');
+    }
+
+    res.status(200).json({
+      success: true,
+      data: report
     });
   });
 
+  /**
+   * PUT /api/v1/records/:sessionId
+   * Update session report
+   */
   updateSessionReport = asyncHandler(async (req, res) => {
-    res.status(501).json({
-      success: false,
-      message: 'updateSessionReport - Not implemented yet'
+    const userId = req.userId;
+    const { sessionId } = req.params;
+    const { summary } = req.body;
+    const { ForbiddenError } = await import('../middleware/errorMiddleware.js');
+
+    // Find tutor profile
+    const Tutor = (await import('../models/Tutor.model.js')).default;
+    const tutor = await Tutor.findOne({ userId });
+
+    if (!tutor) {
+      throw new NotFoundError('Tutor profile not found');
+    }
+
+    // Find report
+    const Record = (await import('../models/Record.model.js')).default;
+    const report = await Record.findOne({ sessionId });
+
+    if (!report) {
+      throw new NotFoundError('Report not found');
+    }
+
+    // Validate ownership
+    if (report.tutorId.toString() !== tutor._id.toString()) {
+      throw new ForbiddenError('You can only update your own reports');
+    }
+
+    // Update fields
+    if (summary) report.summary = summary;
+    
+    await report.save();
+
+    res.status(200).json({
+      success: true,
+      data: report
     });
   });
 }

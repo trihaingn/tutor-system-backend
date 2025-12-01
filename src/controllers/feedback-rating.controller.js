@@ -180,27 +180,236 @@
 // - Query both StudentFeedback and TutorFeedback
 // - Handle anonymous evaluations
 
-import { asyncHandler } from '../middleware/errorMiddleware.js';
+import { asyncHandler, NotFoundError, ValidationError } from '../middleware/errorMiddleware.js';
 
 class FeedbackRatingController {
+  /**
+   * POST /api/v1/feedback/student
+   * Student submits feedback for tutor (UC-26)
+   */
   createStudentFeedback = asyncHandler(async (req, res) => {
-    res.status(501).json({
-      success: false,
-      message: 'createStudentFeedback - Not implemented yet'
+    const userId = req.userId;
+    const { tutorId, sessionId, rating, content } = req.body;
+    const { ForbiddenError, ConflictError } = await import('../middleware/errorMiddleware.js');
+
+    // Validate required fields
+    if (!tutorId || !sessionId || !rating || !content) {
+      throw new ValidationError('tutorId, sessionId, rating, and content are required');
+    }
+
+    // BR-010: Validate rating is integer 1-5
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+      throw new ValidationError('Rating must be an integer between 1 and 5');
+    }
+
+    // Find student profile
+    const Student = (await import('../models/Student.model.js')).default;
+    const student = await Student.findOne({ userId });
+
+    if (!student) {
+      throw new NotFoundError('Student profile not found');
+    }
+
+    // Find session
+    const TutorSession = (await import('../models/TutorSession.model.js')).default;
+    const session = await TutorSession.findById(sessionId);
+
+    if (!session) {
+      throw new NotFoundError('Session not found');
+    }
+
+    // BR-009: Session must be COMPLETED
+    if (session.status !== 'COMPLETED') {
+      throw new ForbiddenError('Cannot evaluate ongoing or cancelled session');
+    }
+
+    // Check if student attended
+    const attended = session.participants.some(
+      p => p.studentId.toString() === student._id.toString()
+    );
+
+    if (!attended) {
+      throw new ForbiddenError('You did not attend this session');
+    }
+
+    // Check for duplicate feedback
+    const StudentFeedback = (await import('../models/StudentFeedback.model.js')).default;
+    const existingFeedback = await StudentFeedback.findOne({
+      studentId: student._id,
+      tutorId,
+      sessionId
+    });
+
+    if (existingFeedback) {
+      throw new ConflictError('You have already evaluated this session');
+    }
+
+    // Create feedback
+    const feedback = await StudentFeedback.create({
+      studentId: student._id,
+      tutorId,
+      sessionId,
+      rating,
+      content,
+      evaluatedAt: new Date()
+    });
+
+    // Update tutor's average rating
+    const Tutor = (await import('../models/Tutor.model.js')).default;
+    const tutor = await Tutor.findById(tutorId);
+    
+    if (tutor) {
+      const allFeedbacks = await StudentFeedback.find({ tutorId });
+      const totalRating = allFeedbacks.reduce((sum, fb) => sum + fb.rating, 0);
+      const avgRating = totalRating / allFeedbacks.length;
+      
+      tutor.stats.averageRating = Math.round(avgRating * 10) / 10;
+      tutor.stats.totalReviews = allFeedbacks.length;
+      await tutor.save();
+    }
+
+    res.status(201).json({
+      success: true,
+      data: feedback
     });
   });
 
+  /**
+   * POST /api/v1/feedback/tutor
+   * Tutor submits feedback for student (UC-27)
+   */
   createTutorFeedback = asyncHandler(async (req, res) => {
-    res.status(501).json({
-      success: false,
-      message: 'createTutorFeedback - Not implemented yet'
+    const userId = req.userId;
+    const { studentId, sessionId, rating, content } = req.body;
+    const { ForbiddenError, ConflictError } = await import('../middleware/errorMiddleware.js');
+
+    // Validate required fields
+    if (!studentId || !sessionId || !rating || !content) {
+      throw new ValidationError('studentId, sessionId, rating, and content are required');
+    }
+
+    // Validate rating
+    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+      throw new ValidationError('Rating must be an integer between 1 and 5');
+    }
+
+    // Find tutor profile
+    const Tutor = (await import('../models/Tutor.model.js')).default;
+    const tutor = await Tutor.findOne({ userId });
+
+    if (!tutor) {
+      throw new NotFoundError('Tutor profile not found');
+    }
+
+    // Find session
+    const TutorSession = (await import('../models/TutorSession.model.js')).default;
+    const session = await TutorSession.findById(sessionId);
+
+    if (!session) {
+      throw new NotFoundError('Session not found');
+    }
+
+    // Validate session status
+    if (session.status !== 'COMPLETED') {
+      throw new ForbiddenError('Cannot evaluate ongoing or cancelled session');
+    }
+
+    // Validate ownership
+    if (session.tutorId.toString() !== tutor._id.toString()) {
+      throw new ForbiddenError('You can only evaluate students from your own sessions');
+    }
+
+    // Check for duplicate feedback
+    const TutorFeedback = (await import('../models/TutorFeedback.model.js')).default;
+    const existingFeedback = await TutorFeedback.findOne({
+      tutorId: tutor._id,
+      studentId,
+      sessionId
+    });
+
+    if (existingFeedback) {
+      throw new ConflictError('You have already evaluated this student for this session');
+    }
+
+    // Create feedback
+    const feedback = await TutorFeedback.create({
+      tutorId: tutor._id,
+      studentId,
+      sessionId,
+      rating,
+      content,
+      evaluatedAt: new Date()
+    });
+
+    res.status(201).json({
+      success: true,
+      data: feedback
     });
   });
 
+  /**
+   * GET /api/v1/feedback/session/:sessionId
+   * Get all evaluations for a session
+   */
   getSessionEvaluations = asyncHandler(async (req, res) => {
-    res.status(501).json({
-      success: false,
-      message: 'getSessionEvaluations - Not implemented yet'
+    const userId = req.userId;
+    const userRole = req.userRole;
+    const { sessionId } = req.params;
+    const { ForbiddenError } = await import('../middleware/errorMiddleware.js');
+
+    // Find session
+    const TutorSession = (await import('../models/TutorSession.model.js')).default;
+    const session = await TutorSession.findById(sessionId);
+
+    if (!session) {
+      throw new NotFoundError('Session not found');
+    }
+
+    // Validate access (tutor or admin)
+    if (userRole === 'TUTOR') {
+      const Tutor = (await import('../models/Tutor.model.js')).default;
+      const tutor = await Tutor.findOne({ userId });
+      
+      if (!tutor || session.tutorId.toString() !== tutor._id.toString()) {
+        throw new ForbiddenError('You can only view evaluations for your own sessions');
+      }
+    } else if (userRole !== 'ADMIN') {
+      throw new ForbiddenError('Only tutors and admins can view session evaluations');
+    }
+
+    // Get both student and tutor feedbacks
+    const StudentFeedback = (await import('../models/StudentFeedback.model.js')).default;
+    const TutorFeedback = (await import('../models/TutorFeedback.model.js')).default;
+
+    const [studentFeedbacks, tutorFeedbacks] = await Promise.all([
+      StudentFeedback.find({ sessionId })
+        .populate('studentId', 'userId')
+        .populate({
+          path: 'studentId',
+          populate: {
+            path: 'userId',
+            select: 'fullName email'
+          }
+        })
+        .lean(),
+      TutorFeedback.find({ sessionId })
+        .populate('studentId', 'userId')
+        .populate({
+          path: 'studentId',
+          populate: {
+            path: 'userId',
+            select: 'fullName email'
+          }
+        })
+        .lean()
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        studentFeedbacks,
+        tutorFeedbacks
+      }
     });
   });
 }

@@ -12,7 +12,7 @@ const TutorSessionSchema = new mongoose.Schema({
         required: true,
         trim: true
     },
-    subject: {
+    subjectId: {
         type: String,
         required: true,
         index: true

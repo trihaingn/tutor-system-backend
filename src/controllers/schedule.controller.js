@@ -174,34 +174,230 @@
 // - Validate ownership
 // - Delete or deactivate
 
-import { asyncHandler } from '../middleware/errorMiddleware.js';
+import { asyncHandler, ValidationError, NotFoundError } from '../middleware/errorMiddleware.js';
 
 class ScheduleController {
+  /**
+   * POST /api/v1/schedules/availability
+   * Tutor sets availability slot (UC-10)
+   */
   setAvailability = asyncHandler(async (req, res) => {
-    res.status(501).json({
-      success: false,
-      message: 'setAvailability - Not implemented yet'
+    const userId = req.userId;
+    const { ConflictError } = await import('../middleware/errorMiddleware.js');
+    
+    // Find tutor profile
+    const Tutor = (await import('../models/Tutor.model.js')).default;
+    const tutor = await Tutor.findOne({ userId });
+    
+    if (!tutor) {
+      throw new NotFoundError('Tutor profile not found');
+    }
+
+    const { dayOfWeek, startTime, endTime } = req.body;
+
+    // Validate required fields
+    if (dayOfWeek === undefined || !startTime || !endTime) {
+      throw new ValidationError('dayOfWeek, startTime, and endTime are required');
+    }
+
+    // Validate dayOfWeek range
+    if (dayOfWeek < 0 || dayOfWeek > 6) {
+      throw new ValidationError('dayOfWeek must be between 0 (Sunday) and 6 (Saturday)');
+    }
+
+    // BR-001: Validate hourly times (HH:00 format)
+    const hourlyRegex = /^([01]\d|2[0-3]):00$/;
+    if (!hourlyRegex.test(startTime)) {
+      throw new ValidationError('startTime must be hourly format (HH:00)');
+    }
+    if (!hourlyRegex.test(endTime)) {
+      throw new ValidationError('endTime must be hourly format (HH:00)');
+    }
+
+    // Validate endTime > startTime
+    if (endTime <= startTime) {
+      throw new ValidationError('endTime must be greater than startTime');
+    }
+
+    // Check for overlapping slots
+    const Availability = (await import('../models/Availability.model.js')).default;
+    const overlap = await Availability.findOne({
+      tutorId: tutor._id,
+      dayOfWeek,
+      isActive: true,
+      $or: [
+        { startTime: { $lt: endTime }, endTime: { $gt: startTime } }
+      ]
+    });
+
+    if (overlap) {
+      throw new ConflictError('Time slot overlaps with existing availability');
+    }
+
+    // Create availability
+    const availability = await Availability.create({
+      tutorId: tutor._id,
+      dayOfWeek,
+      startTime,
+      endTime,
+      isActive: true
+    });
+
+    res.status(201).json({
+      success: true,
+      data: availability
     });
   });
 
+  /**
+   * GET /api/v1/schedules/availability/me
+   * Get my availability slots
+   */
   getMyAvailability = asyncHandler(async (req, res) => {
-    res.status(501).json({
-      success: false,
-      message: 'getMyAvailability - Not implemented yet'
+    const userId = req.userId;
+    
+    // Find tutor profile
+    const Tutor = (await import('../models/Tutor.model.js')).default;
+    const tutor = await Tutor.findOne({ userId });
+    
+    if (!tutor) {
+      throw new NotFoundError('Tutor profile not found');
+    }
+
+    const { isActive } = req.query;
+
+    const filter = { tutorId: tutor._id };
+    if (isActive !== undefined) {
+      filter.isActive = isActive === 'true';
+    }
+
+    const Availability = (await import('../models/Availability.model.js')).default;
+    const availabilities = await Availability.find(filter)
+      .sort({ dayOfWeek: 1, startTime: 1 })
+      .lean();
+
+    res.status(200).json({
+      success: true,
+      data: availabilities
     });
   });
 
+  /**
+   * PUT /api/v1/schedules/availability/:id
+   * Update availability slot
+   */
   updateAvailability = asyncHandler(async (req, res) => {
-    res.status(501).json({
-      success: false,
-      message: 'updateAvailability - Not implemented yet'
+    const userId = req.userId;
+    const { id } = req.params;
+    const { ForbiddenError, ConflictError } = await import('../middleware/errorMiddleware.js');
+    
+    // Find tutor profile
+    const Tutor = (await import('../models/Tutor.model.js')).default;
+    const tutor = await Tutor.findOne({ userId });
+    
+    if (!tutor) {
+      throw new NotFoundError('Tutor profile not found');
+    }
+
+    // Find availability
+    const Availability = (await import('../models/Availability.model.js')).default;
+    const availability = await Availability.findById(id);
+    
+    if (!availability) {
+      throw new NotFoundError('Availability slot not found');
+    }
+
+    // Validate ownership
+    if (availability.tutorId.toString() !== tutor._id.toString()) {
+      throw new ForbiddenError('Not authorized to update this availability slot');
+    }
+
+    const { startTime, endTime, isActive } = req.body;
+
+    // Validate hourly times if provided
+    const hourlyRegex = /^([01]\d|2[0-3]):00$/;
+    if (startTime && !hourlyRegex.test(startTime)) {
+      throw new ValidationError('startTime must be hourly format (HH:00)');
+    }
+    if (endTime && !hourlyRegex.test(endTime)) {
+      throw new ValidationError('endTime must be hourly format (HH:00)');
+    }
+
+    const newStartTime = startTime || availability.startTime;
+    const newEndTime = endTime || availability.endTime;
+
+    // Validate endTime > startTime
+    if (newEndTime <= newStartTime) {
+      throw new ValidationError('endTime must be greater than startTime');
+    }
+
+    // Check for overlaps (exclude current record)
+    if (startTime || endTime) {
+      const overlap = await Availability.findOne({
+        _id: { $ne: id },
+        tutorId: tutor._id,
+        dayOfWeek: availability.dayOfWeek,
+        isActive: true,
+        $or: [
+          { startTime: { $lt: newEndTime }, endTime: { $gt: newStartTime } }
+        ]
+      });
+
+      if (overlap) {
+        throw new ConflictError('Updated time slot overlaps with existing availability');
+      }
+    }
+
+    // Update fields
+    if (startTime) availability.startTime = startTime;
+    if (endTime) availability.endTime = endTime;
+    if (isActive !== undefined) availability.isActive = isActive;
+
+    await availability.save();
+
+    res.status(200).json({
+      success: true,
+      data: availability
     });
   });
 
+  /**
+   * DELETE /api/v1/schedules/availability/:id
+   * Delete availability slot
+   */
   deleteAvailability = asyncHandler(async (req, res) => {
-    res.status(501).json({
-      success: false,
-      message: 'deleteAvailability - Not implemented yet'
+    const userId = req.userId;
+    const { id } = req.params;
+    const { ForbiddenError } = await import('../middleware/errorMiddleware.js');
+    
+    // Find tutor profile
+    const Tutor = (await import('../models/Tutor.model.js')).default;
+    const tutor = await Tutor.findOne({ userId });
+    
+    if (!tutor) {
+      throw new NotFoundError('Tutor profile not found');
+    }
+
+    // Find availability
+    const Availability = (await import('../models/Availability.model.js')).default;
+    const availability = await Availability.findById(id);
+    
+    if (!availability) {
+      throw new NotFoundError('Availability slot not found');
+    }
+
+    // Validate ownership
+    if (availability.tutorId.toString() !== tutor._id.toString()) {
+      throw new ForbiddenError('Not authorized to delete this availability slot');
+    }
+
+    // Soft delete: set isActive to false
+    availability.isActive = false;
+    await availability.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Availability slot deleted successfully'
     });
   });
 }

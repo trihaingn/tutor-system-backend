@@ -104,6 +104,54 @@ import { roleMiddleware } from '../middleware/roleMiddleware.js';
 // ROUTES IMPLEMENTATION
 // ============================================================
 
+/**
+ * @swagger
+ * /tutors/search:
+ *   get:
+ *     summary: Search tutors by subject (UC-07)
+ *     tags: [Tutors]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: subjectId
+ *         schema:
+ *           type: string
+ *         description: Filter by subject identifier
+ *         example: CNPM_NC
+ *       - in: query
+ *         name: type
+ *         schema:
+ *           type: string
+ *           enum: [LECTURER, RESEARCH_STUDENT, SENIOR_STUDENT]
+ *       - in: query
+ *         name: minRating
+ *         schema:
+ *           type: number
+ *           format: float
+ *         description: Minimum average rating
+ *       - in: query
+ *         name: isAcceptingStudents
+ *         schema:
+ *           type: boolean
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *     responses:
+ *       200:
+ *         description: List of tutors with pagination
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/PaginationResponse'
+ */
 // GET /api/v1/tutors/search - Search tutors (UC-06)
 router.get(
   '/search',
@@ -111,6 +159,27 @@ router.get(
   tutorController.searchTutors
 );
 
+/**
+ * @swagger
+ * /tutors/by-hcmut-id/{hcmutId}:
+ *   get:
+ *     summary: Get tutor by HCMUT ID (staff_id/maCB)
+ *     tags: [Tutors]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: hcmutId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: HCMUT staff ID (e.g., "hungnq")
+ *     responses:
+ *       200:
+ *         description: Tutor details
+ *       404:
+ *         description: Tutor not found
+ */
 // GET /api/v1/tutors/by-hcmut-id/:hcmutId - Get tutor by HCMUT ID (maCB/staff_id)
 router.get(
   '/by-hcmut-id/:hcmutId',
@@ -118,6 +187,26 @@ router.get(
   tutorController.getTutorByHcmutId
 );
 
+/**
+ * @swagger
+ * /tutors/by-hcmut-id/{hcmutId}/availability:
+ *   get:
+ *     summary: Get tutor availability by HCMUT ID
+ *     tags: [Tutors]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: hcmutId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Tutor availability slots
+ *       404:
+ *         description: Tutor not found
+ */
 // GET /api/v1/tutors/by-hcmut-id/:hcmutId/availability - Get tutor availability by HCMUT ID
 router.get(
   '/by-hcmut-id/:hcmutId/availability',
@@ -125,6 +214,22 @@ router.get(
   tutorController.getTutorAvailabilityByHcmutId
 );
 
+/**
+ * @swagger
+ * /tutors/me:
+ *   get:
+ *     summary: Get my tutor profile (UC-20)
+ *     tags: [Tutors]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: My tutor profile
+ *       403:
+ *         description: Only TUTOR/ADMIN allowed
+ *       404:
+ *         description: Tutor profile not found
+ */
 // GET /api/v1/tutors/me - Get my tutor profile
 router.get(
   '/me',
@@ -133,6 +238,46 @@ router.get(
   tutorController.getMyProfile
 );
 
+/**
+ * @swagger
+ * /tutors/me/sessions:
+ *   get:
+ *     summary: Get my sessions (UC-21)
+ *     tags: [Tutors]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [SCHEDULED, IN_PROGRESS, COMPLETED, CANCELLED]
+ *       - in: query
+ *         name: startDate
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *       - in: query
+ *         name: endDate
+ *         schema:
+ *           type: string
+ *           format: date-time
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *     responses:
+ *       200:
+ *         description: List of sessions with pagination
+ *       403:
+ *         description: Only TUTOR/ADMIN allowed
+ */
 // GET /api/v1/tutors/me/sessions - Get my sessions
 router.get(
   '/me/sessions',
@@ -141,6 +286,31 @@ router.get(
   tutorController.getMySessions
 );
 
+/**
+ * @swagger
+ * /tutors/me/feedbacks:
+ *   get:
+ *     summary: Get feedbacks received (UC-22)
+ *     tags: [Tutors]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *     responses:
+ *       200:
+ *         description: List of feedbacks with pagination
+ *       403:
+ *         description: Only TUTOR/ADMIN allowed
+ */
 // GET /api/v1/tutors/me/feedbacks - Get my feedbacks
 router.get(
   '/me/feedbacks',
@@ -149,6 +319,26 @@ router.get(
   tutorController.getMyFeedbacks
 );
 
+/**
+ * @swagger
+ * /tutors/{tutorId}/availability:
+ *   get:
+ *     summary: Get tutor availability slots (public view)
+ *     tags: [Tutors]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: tutorId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Tutor availability slots
+ *       404:
+ *         description: Tutor not found
+ */
 // GET /api/v1/tutors/:tutorId/availability - Get tutor availability (public)
 router.get(
   '/:tutorId/availability',

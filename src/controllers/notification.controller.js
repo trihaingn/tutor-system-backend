@@ -155,34 +155,131 @@
 // - Count unread notifications
 // - Return count for badge
 
-import { asyncHandler } from '../middleware/errorMiddleware.js';
+import { asyncHandler, NotFoundError } from '../middleware/errorMiddleware.js';
 
 class NotificationController {
+  /**
+   * GET /api/v1/notifications
+   * Get user notifications (UC-13)
+   */
   getNotifications = asyncHandler(async (req, res) => {
-    res.status(501).json({
-      success: false,
-      message: 'getNotifications - Not implemented yet'
+    const userId = req.userId;
+    const Notification = (await import('../models/Notification.model.js')).default;
+
+    // Parse query params
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 20;
+    const skip = (page - 1) * limit;
+
+    // Build filter
+    const filter = { recipientId: userId };
+    
+    if (req.query.isRead !== undefined) {
+      filter.isRead = req.query.isRead === 'true';
+    }
+    
+    if (req.query.type) {
+      filter.type = req.query.type;
+    }
+
+    // Query notifications
+    const [notifications, total] = await Promise.all([
+      Notification.find(filter)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Notification.countDocuments(filter)
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: notifications,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      }
     });
   });
 
+  /**
+   * PUT /api/v1/notifications/:notificationId/read
+   * Mark notification as read (UC-14)
+   */
   markAsRead = asyncHandler(async (req, res) => {
-    res.status(501).json({
-      success: false,
-      message: 'markAsRead - Not implemented yet'
+    const userId = req.userId;
+    const { notificationId } = req.params;
+    const { ForbiddenError } = await import('../middleware/errorMiddleware.js');
+    const Notification = (await import('../models/Notification.model.js')).default;
+
+    // Find notification
+    const notification = await Notification.findById(notificationId);
+
+    if (!notification) {
+      throw new NotFoundError('Notification not found');
+    }
+
+    // Validate ownership
+    if (notification.recipientId.toString() !== userId.toString()) {
+      throw new ForbiddenError('You can only mark your own notifications as read');
+    }
+
+    // Update
+    notification.isRead = true;
+    notification.readAt = new Date();
+    await notification.save();
+
+    res.status(200).json({
+      success: true,
+      data: {
+        notificationId: notification._id,
+        isRead: notification.isRead,
+        readAt: notification.readAt
+      }
     });
   });
 
+  /**
+   * PUT /api/v1/notifications/read-all
+   * Mark all notifications as read
+   */
   markAllAsRead = asyncHandler(async (req, res) => {
-    res.status(501).json({
-      success: false,
-      message: 'markAllAsRead - Not implemented yet'
+    const userId = req.userId;
+    const Notification = (await import('../models/Notification.model.js')).default;
+
+    // Update all unread notifications
+    const result = await Notification.updateMany(
+      { recipientId: userId, isRead: false },
+      { $set: { isRead: true, readAt: new Date() } }
+    );
+
+    res.status(200).json({
+      success: true,
+      message: 'All notifications marked as read',
+      count: result.modifiedCount
     });
   });
 
+  /**
+   * GET /api/v1/notifications/unread-count
+   * Get unread notification count
+   */
   getUnreadCount = asyncHandler(async (req, res) => {
-    res.status(501).json({
-      success: false,
-      message: 'getUnreadCount - Not implemented yet'
+    const userId = req.userId;
+    const Notification = (await import('../models/Notification.model.js')).default;
+
+    const unreadCount = await Notification.countDocuments({
+      recipientId: userId,
+      isRead: false
+    });
+
+    res.status(200).json({
+      success: true,
+      data: {
+        unreadCount
+      }
     });
   });
 }

@@ -13,9 +13,9 @@
  * - /schedules      -> schedule.routes.js
  * - /students       -> student.routes.js
  * - /tutors         -> tutor.routes.js
- * - /notifications  -> notification.routes.js
- * - /record       -> record.routes.js
- * - /evaluations    -> feedback-rating.routes.js
+// - /notifications  -> notification.routes.js
+// - /records        -> record.routes.js
+// - /evaluations    -> feedback-rating.routes.js
  */
 
 // TODO: Import express.Router

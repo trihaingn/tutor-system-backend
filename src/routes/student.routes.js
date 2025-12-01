@@ -66,6 +66,20 @@ import { roleMiddleware } from '../middleware/roleMiddleware.js';
 // ROUTES IMPLEMENTATION
 // ============================================================
 
+/**
+ * @swagger
+ * /students/me:
+ *   get:
+ *     summary: Get my student profile (UC-06)
+ *     tags: [Students]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Student profile details
+ *       403:
+ *         description: Only STUDENT role allowed
+ */
 // GET /api/v1/students/me - Get my profile
 router.get(
   '/me',
@@ -74,6 +88,40 @@ router.get(
   studentController.getMyProfile
 );
 
+/**
+ * @swagger
+ * /students/me/appointments:
+ *   get:
+ *     summary: Get my appointment history (UC-28)
+ *     tags: [Students]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *           enum: [SCHEDULED, COMPLETED, CANCELLED]
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *     responses:
+ *       200:
+ *         description: List of appointments with pagination
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/PaginationResponse'
+ *       403:
+ *         description: Only STUDENT role allowed
+ */
 // GET /api/v1/students/me/appointments - Get my appointment history
 router.get(
   '/me/appointments',
@@ -82,6 +130,31 @@ router.get(
   studentController.getMyAppointments
 );
 
+/**
+ * @swagger
+ * /students/me/feedbacks:
+ *   get:
+ *     summary: Get my feedback history (UC-29)
+ *     tags: [Students]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           default: 1
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           default: 20
+ *     responses:
+ *       200:
+ *         description: List of feedbacks with pagination
+ *       403:
+ *         description: Only STUDENT role allowed
+ */
 // GET /api/v1/students/me/feedbacks - Get my feedback history
 router.get(
   '/me/feedbacks',
