@@ -6,9 +6,7 @@ const TutorSchema = new mongoose.Schema(
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
-      unique: true,
-      index: true
+      required: true
     },
     
     // Subjects taught (identifiers)
@@ -49,6 +47,9 @@ const TutorSchema = new mongoose.Schema(
 );
 
 // Indexes
-TutorSchema.index({ userId: 1 });
+TutorSchema.index({ userId: 1 }, { unique: true });
+TutorSchema.index({ subjectIds: 1 });
+TutorSchema.index({ 'stats.averageRating': -1 });
+TutorSchema.index({ isAcceptingStudents: 1, 'stats.averageRating': -1 });
 
 export default mongoose.model('Tutor', TutorSchema);

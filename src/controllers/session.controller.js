@@ -276,6 +276,12 @@ class SessionController {
       throw new ConflictError('Time slot conflicts with existing session');
     }
 
+    // Auto-add subjectId to tutor's subjectIds if not already present
+    if (!tutor.subjectIds.includes(subjectId)) {
+      tutor.subjectIds.push(subjectId);
+      await tutor.save();
+    }
+
     // Create session
     const session = await TutorSession.create({
       tutorId: tutor._id,

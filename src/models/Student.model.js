@@ -6,15 +6,12 @@ const StudentSchema = new mongoose.Schema(
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
-      unique: true,
-      index: true
+      required: true
     },
     
     // Student ID
     mssv: {
       type: String,
-      sparse: true,
       trim: true
     },
     
@@ -65,7 +62,7 @@ const StudentSchema = new mongoose.Schema(
 );
 
 // Indexes
-StudentSchema.index({ userId: 1 });
+StudentSchema.index({ userId: 1 }, { unique: true });
 StudentSchema.index({ mssv: 1 }, { unique: true, sparse: true });
 StudentSchema.index({ major: 1, enrollmentYear: 1 });
 

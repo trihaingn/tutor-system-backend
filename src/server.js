@@ -164,6 +164,7 @@ dotenv.config();
 
 import app from './app.js';
 import { connectDB, disconnectDB } from './database/connection.js';
+import { runMigrations } from './database/migrations.js';
 
 const PORT = process.env.PORT || 5000;
 const NODE_ENV = process.env.NODE_ENV || 'development';
@@ -176,6 +177,9 @@ const startServer = async () => {
     // Connect to MongoDB
     await connectDB();
     console.log('✓ MongoDB connected successfully');
+
+    // Run database migrations (sync indexes, cleanup old schema)
+    await runMigrations();
 
     // Start Express server
     const server = app.listen(PORT, () => {

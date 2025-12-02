@@ -301,7 +301,7 @@ async function validateRegistrationData(studentId, tutorId, subjectId) {
   }
 
   // BR: Validate Tutor has expertise in this subject
-  const hasExpertise = tutor.expertise && tutor.expertise.some(exp => exp.subjectId === subjectId);
+  const hasExpertise = tutor.subjectIds && tutor.subjectIds.includes(subjectId);
   if (!hasExpertise) {
     throw new ValidationError('Tutor không dạy môn học này');
   }
@@ -317,7 +317,7 @@ async function validateRegistrationData(studentId, tutorId, subjectId) {
 /**
  * Check duplicate registration (BR-006)
  */
-async function checkDuplicateRegistration(studentId, tutorId, subjectId) {
+async function checkDuplicateRegistration(studentId, tutorId, subjectId) {  
   // BR-006: No duplicates for same (student, tutor, subject)
   const existingRegistration = await CourseRegistrationRepository.findOne({
     studentId,
@@ -356,14 +356,12 @@ async function registerCourse(studentId, tutorId, subjectId) {
     approvedBy: 'SYSTEM'            // INSTANT: System approval
   });
 
-  // Step 4: Update Student statistics
-  await StudentRepository.update(student._id, {
-    registeredTutors: (student.registeredTutors || 0) + 1
-  });
+  // Step 4: Update Student - add tutor to registeredTutors array
+  await StudentRepository.addRegisteredTutor(student._id, tutor._id);
 
   // Step 5: Update Tutor statistics
   await TutorRepository.update(tutor._id, {
-    totalStudents: (tutor.totalStudents || 0) + 1
+    'stats.totalStudents': (tutor.stats?.totalStudents || 0) + 1
   });
 
   // Step 6: BR-008 - Send notification to Tutor
@@ -485,15 +483,13 @@ async function cancelRegistration(registrationId, studentId) {
   // Update statistics
   const student = await StudentRepository.findById(studentId);
   if (student) {
-    await StudentRepository.update(studentId, {
-      registeredTutors: Math.max(0, (student.registeredTutors || 0) - 1)
-    });
+    await StudentRepository.removeRegisteredTutor(studentId, registration.tutorId);
   }
 
   const tutor = await TutorRepository.findById(registration.tutorId);
   if (tutor) {
     await TutorRepository.update(registration.tutorId, {
-      totalStudents: Math.max(0, (tutor.totalStudents || 0) - 1)
+      'stats.totalStudents': Math.max(0, (tutor.stats?.totalStudents || 0) - 1)
     });
   }
 

@@ -146,7 +146,7 @@ class RegistrationController {
     }
 
     // Call service to register course
-    const registration = await CourseRegistrationService.registerStudentWithTutor(
+    const registration = await CourseRegistrationService.registerCourse(
       student._id,
       tutorId,
       subjectId
