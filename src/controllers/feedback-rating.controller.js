@@ -180,7 +180,8 @@
 // - Query both StudentFeedback and TutorFeedback
 // - Handle anonymous evaluations
 
-import { asyncHandler, NotFoundError, ValidationError } from '../middleware/errorMiddleware.js';
+import { asyncHandler } from '../middleware/errorMiddleware.js';
+import { NotFoundError, ValidationError, ForbiddenError, ConflictError } from '../utils/error.js';
 
 class FeedbackRatingController {
   /**
@@ -190,7 +191,7 @@ class FeedbackRatingController {
   createStudentFeedback = asyncHandler(async (req, res) => {
     const userId = req.userId;
     const { tutorId, sessionId, rating, content } = req.body;
-    const { ForbiddenError, ConflictError } = await import('../middleware/errorMiddleware.js');
+    // Use error classes imported from ../utils/error.js above
 
     // Validate required fields
     if (!tutorId || !sessionId || !rating || !content) {
@@ -281,7 +282,7 @@ class FeedbackRatingController {
   createTutorFeedback = asyncHandler(async (req, res) => {
     const userId = req.userId;
     const { studentId, sessionId, rating, content } = req.body;
-    const { ForbiddenError, ConflictError } = await import('../middleware/errorMiddleware.js');
+    // Use error classes imported from ../utils/error.js above
 
     // Validate required fields
     if (!studentId || !sessionId || !rating || !content) {
@@ -355,7 +356,7 @@ class FeedbackRatingController {
     const userId = req.userId;
     const userRole = req.userRole;
     const { sessionId } = req.params;
-    const { ForbiddenError } = await import('../middleware/errorMiddleware.js');
+    // Use error classes imported from ../utils/error.js above
 
     // Find session
     const TutorSession = (await import('../models/TutorSession.model.js')).default;

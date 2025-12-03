@@ -36,7 +36,6 @@
 //    - Check if Tutor exists and active
 //    - Check duplicate registration (BR-006)
 //    - INSTANT APPROVAL: status = 'ACTIVE' (BR-005)
-//    - Trigger notification to Tutor (BR-008)
 // 3. Return success response with registration data
 // 
 // RESPONSE:

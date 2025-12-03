@@ -97,7 +97,6 @@
 //    - Check session capacity
 //    - Create appointment
 //    - Increment session.currentParticipants
-//    - Trigger notification to Tutor (BR-008)
 // 3. Return appointment data
 // 
 // RESPONSE:
@@ -170,8 +169,7 @@
 // 2. Find session by id
 // 3. ⚠️ Validate ownership: session.tutorId === tutorId
 // 4. Update status to 'CANCELLED'
-// 5. Trigger notifications to all participants (BR-008)
-// 6. Return success response
+// 5. Return success response
 // 
 // RESPONSE:
 // {
@@ -202,9 +200,9 @@
 // TODO: Implement cancelSession() - DELETE /api/v1/sessions/:sessionId
 // - Validate ownership
 // - Update status
-// - Trigger notifications
 
 import { asyncHandler, ValidationError, NotFoundError } from '../middleware/errorMiddleware.js';
+import * as NotificationService from '../services/notification/NotificationService.js';
 
 class SessionController {
   /**
@@ -359,70 +357,6 @@ class SessionController {
   });
 
   /**
-   * POST /api/v1/sessions/:sessionId/appointments
-   * Student books appointment (UC-12)
-   */
-  bookAppointment = asyncHandler(async (req, res) => {
-    const userId = req.userId;
-    const { sessionId } = req.params;
-    const { notes } = req.body;
-    const { ConflictError, ForbiddenError } = await import('../middleware/errorMiddleware.js');
-
-    // Find student profile
-    const Student = (await import('../models/Student.model.js')).default;
-    const student = await Student.findOne({ userId });
-    
-    if (!student) {
-      throw new NotFoundError('Student profile not found');
-    }
-
-    // Find session
-    const TutorSession = (await import('../models/TutorSession.model.js')).default;
-    const session = await TutorSession.findById(sessionId);
-    
-    if (!session) {
-      throw new NotFoundError('Session not found');
-    }
-
-    // Validate session status
-    if (session.status !== 'SCHEDULED') {
-      throw new ConflictError('Session is not available for booking');
-    }
-
-    // Check if already booked
-    const alreadyBooked = session.participants.some(
-      p => p.studentId.toString() === student._id.toString()
-    );
-    
-    if (alreadyBooked) {
-      throw new ConflictError('You have already booked this session');
-    }
-
-    // Check capacity (assuming default max is unlimited unless specified)
-    // If you have maxParticipants field, add validation here
-    
-    // Add participant
-    session.participants.push({
-      studentId: student._id,
-      registeredAt: new Date(),
-      attended: false
-    });
-
-    await session.save();
-
-    res.status(201).json({
-      success: true,
-      data: {
-        sessionId: session._id,
-        studentId: student._id,
-        status: 'CONFIRMED',
-        bookedAt: new Date(),
-        notes: notes || null
-      }
-    });
-  });
-
-  /**
    * DELETE /api/v1/sessions/:id
    * Tutor cancels session (UC-15)
    */
@@ -456,7 +390,41 @@ class SessionController {
     session.status = 'CANCELLED';
     await session.save();
 
-    // TODO: Trigger notifications to participants (BR-008)
+    // BR-008: Send cancellation notifications to all participants
+    if (session.participants && session.participants.length > 0) {
+      const Student = (await import('../models/Student.model.js')).default;
+      
+      for (const participant of session.participants) {
+        try {
+          // Get student's userId for notification
+          const student = await Student.findById(participant.studentId);
+          
+          if (student && student.userId) {
+            // userId is already an ObjectId, no need to access ._id
+            const recipientUserId = student.userId._id || student.userId;
+            
+            await NotificationService.create(
+              recipientUserId,
+              NotificationService.NOTIFICATION_TYPES.SESSION_CANCELLED,
+              'Buổi học đã bị hủy',
+              `Buổi học "${session.title}" vào lúc ${new Date(session.startTime).toLocaleString('vi-VN')} đã bị Tutor hủy.`,
+              {
+                relatedId: session._id,
+                relatedType: 'Session'
+              }
+            );
+            
+            console.log(`✓ Sent cancellation notification to student ${participant.studentId}`);
+          } else {
+            console.warn(`⚠ Student ${participant.studentId} not found or missing userId`);
+          }
+        } catch (notifError) {
+          // Log but don't fail the cancellation if notification fails
+          console.error(`✗ Failed to send notification to participant ${participant.studentId}:`, notifError.message);
+          console.error(notifError.stack);
+        }
+      }
+    }
 
     res.status(200).json({
       success: true,

@@ -57,6 +57,17 @@ export class AuthorizationError extends AppError {
 }
 
 /**
+ * 403 Forbidden Error
+ * Used when user is not allowed to perform an action on a resource
+ * This is provided for code that expects a `ForbiddenError` class name.
+ */
+export class ForbiddenError extends AppError {
+  constructor(message = 'Forbidden') {
+    super(message, 403);
+  }
+}
+
+/**
  * 404 Not Found Error
  * Used when requested resource does not exist
  */

@@ -172,7 +172,8 @@
 // - Validate ownership
 // - Update fields
 
-import { asyncHandler, NotFoundError, ValidationError } from '../middleware/errorMiddleware.js';
+import { asyncHandler } from '../middleware/errorMiddleware.js';
+import { NotFoundError, ValidationError, ForbiddenError, ConflictError } from '../utils/error.js';
 
 class RecordController {
   /**
@@ -183,7 +184,7 @@ class RecordController {
     const userId = req.userId;
     const { sessionId } = req.params;
     const { summary } = req.body;
-    const { ForbiddenError, ConflictError } = await import('../middleware/errorMiddleware.js');
+    // Use error classes imported from ../utils/error.js above
 
     if (!summary) {
       throw new ValidationError('Summary is required');
@@ -248,7 +249,7 @@ class RecordController {
     const userId = req.userId;
     const userRole = req.userRole;
     const { sessionId } = req.params;
-    const { ForbiddenError } = await import('../middleware/errorMiddleware.js');
+    // Use error classes imported from ../utils/error.js above
 
     // Find session
     const TutorSession = (await import('../models/TutorSession.model.js')).default;

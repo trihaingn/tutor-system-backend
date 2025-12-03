@@ -209,62 +209,6 @@ router.get(
 
 /**
  * @swagger
- * /sessions/{sessionId}/appointments:
- *   post:
- *     summary: Student books appointment for session (UC-12)
- *     tags: [Sessions]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: sessionId
- *         required: true
- *         schema:
- *           type: string
- *         description: Session ID
- *     requestBody:
- *       required: false
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               notes:
- *                 type: string
- *                 example: "Need help with Project 1"
- *     responses:
- *       200:
- *         description: Appointment booked successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 success:
- *                   type: boolean
- *                   example: true
- *                 message:
- *                   type: string
- *                   example: "Appointment booked successfully"
- *                 data:
- *                   $ref: '#/components/schemas/TutorSession'
- *       404:
- *         description: Session not found
- *       409:
- *         description: Already booked or session full
- *       403:
- *         description: Forbidden - Only STUDENT role allowed
- */
-// POST /api/v1/sessions/:sessionId/appointments - Student books appointment (UC-12)
-router.post(
-  '/:sessionId/appointments',
-  authMiddleware,
-  roleMiddleware(['STUDENT']),
-  sessionController.bookAppointment
-);
-
-/**
- * @swagger
  * /sessions/{id}:
  *   delete:
  *     summary: Tutor cancels session (UC-15)

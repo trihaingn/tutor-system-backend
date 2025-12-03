@@ -157,74 +157,10 @@ class StudentController {
     });
   });
 
-  getMyAppointments = asyncHandler(async (req, res) => {
-    const userId = req.userId;
-    
-    // Find student profile
-    const Student = (await import('../models/Student.model.js')).default;
-    const student = await Student.findOne({ userId }).lean();
-    
-    if (!student) {
-      const { NotFoundError } = await import('../middleware/errorMiddleware.js');
-      throw new NotFoundError('Student profile not found');
-    }
-    
-    // Query appointments with pagination
-    const TutorSession = (await import('../models/TutorSession.model.js')).default;
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
-    
-    // Filter by status if provided
-    const filter = {
-      'participants.studentId': student._id
-    };
-    
-    if (req.query.status) {
-      filter.status = req.query.status;
-    }
-    
-    const [appointments, total] = await Promise.all([
-      TutorSession.find(filter)
-        .populate('tutorId', 'userId subjects rating totalSessions')
-        .populate({
-          path: 'tutorId',
-          populate: {
-            path: 'userId',
-            select: 'fullName email'
-          }
-        })
-        .sort({ startTime: -1 })
-        .skip(skip)
-        .limit(limit)
-        .lean(),
-      TutorSession.countDocuments(filter)
-    ]);
-    
-    // Extract student's participation data
-    const enrichedAppointments = appointments.map(session => {
-      const participation = session.participants.find(
-        p => p.studentId.toString() === student._id.toString()
-      );
-      
-      return {
-        ...session,
-        myParticipation: participation
-      };
-    });
-    
-    res.status(200).json({
-      success: true,
-      data: enrichedAppointments,
-      pagination: {
-        page,
-        limit,
-        total,
-        totalPages: Math.ceil(total / limit)
-      }
-    });
-  });
-
+  /**
+   * GET /api/v1/students/me/feedbacks
+   * Get my feedback history (UC-29)
+   */
   getMyFeedbacks = asyncHandler(async (req, res) => {
     const userId = req.userId;
     
@@ -278,6 +214,147 @@ class StudentController {
         totalPages: Math.ceil(total / limit)
       }
     });
+  });
+
+  /**
+   * POST /api/v1/students/sessions/book
+   * Book a session (UC-STUDENT-BOOK)
+   * 
+   * BUSINESS RULES:
+   * - BR-BOOK-001: Must be registered with tutor
+   * - BR-BOOK-002: Check tutor availability
+   * - BR-BOOK-004: No duplicate bookings
+   */
+  bookSession = asyncHandler(async (req, res) => {
+    const userId = req.userId;
+    const { sessionId } = req.body;
+
+    if (!sessionId) {
+      const { ValidationError } = await import('../middleware/errorMiddleware.js');
+      throw new ValidationError('sessionId is required');
+    }
+
+    // Find student profile
+    const Student = (await import('../models/Student.model.js')).default;
+    const student = await Student.findOne({ userId });
+    
+    if (!student) {
+      const { NotFoundError } = await import('../middleware/errorMiddleware.js');
+      throw new NotFoundError('Student profile not found');
+    }
+
+    // Call service
+    const StudentSessionService = (await import('../services/session/StudentSessionService.js')).default;
+    const session = await StudentSessionService.bookSession(student._id, sessionId);
+
+    res.status(201).json({
+      success: true,
+      message: 'Đặt lịch session thành công',
+      data: {
+        sessionId: session._id,
+        title: session.title,
+        subjectId: session.subjectId,
+        startTime: session.startTime,
+        endTime: session.endTime,
+        location: session.location,
+        sessionType: session.sessionType,
+        status: session.status,
+        tutor: session.tutorId,
+        bookedAt: new Date()
+      }
+    });
+  });
+
+  /**
+   * GET /api/v1/students/me/sessions
+   * Get my booked sessions (UC-STUDENT-LIST)
+   */
+  getMySessions = asyncHandler(async (req, res) => {
+    const userId = req.userId;
+    
+    // Find student profile
+    const Student = (await import('../models/Student.model.js')).default;
+    const student = await Student.findOne({ userId });
+    
+    if (!student) {
+      const { NotFoundError } = await import('../middleware/errorMiddleware.js');
+      throw new NotFoundError('Student profile not found');
+    }
+
+    // Get query options
+    const options = {
+      status: req.query.status,
+      page: req.query.page,
+      limit: req.query.limit
+    };
+
+    // Call service
+    const StudentSessionService = (await import('../services/session/StudentSessionService.js')).default;
+    const result = await StudentSessionService.getStudentSessions(student._id, options);
+
+    res.status(200).json({
+      success: true,
+      data: result.sessions,
+      pagination: result.pagination
+    });
+  });
+
+  /**
+   * GET /api/v1/students/tutors/:tutorId/sessions
+   * Get all sessions created by a specific tutor
+   */
+  getTutorSessions = asyncHandler(async (req, res) => {
+    const { tutorId } = req.params;
+
+    if (!tutorId) {
+      const { ValidationError } = await import('../middleware/errorMiddleware.js');
+      throw new ValidationError('tutorId is required');
+    }
+
+    // Get query options
+    const options = {
+      status: req.query.status,
+      subjectId: req.query.subjectId,
+      startDate: req.query.startDate,
+      endDate: req.query.endDate,
+      page: req.query.page,
+      limit: req.query.limit
+    };
+
+    // Call service
+    const StudentSessionService = (await import('../services/session/StudentSessionService.js')).default;
+    const result = await StudentSessionService.getTutorSessions(tutorId, options);
+
+    res.status(200).json({
+      success: true,
+      data: result.sessions,
+      pagination: result.pagination,
+      tutor: result.tutor
+    });
+  });
+
+  /**
+   * DELETE /api/v1/students/sessions/:id/book
+   * Cancel session booking (UC-STUDENT-CANCEL)
+   */
+  cancelBooking = asyncHandler(async (req, res) => {
+    const userId = req.userId;
+    const { id: sessionId } = req.params;
+
+    // Find student profile
+    const Student = (await import('../models/Student.model.js')).default;
+    const student = await Student.findOne({ userId });
+    
+    if (!student) {
+      const { NotFoundError } = await import('../middleware/errorMiddleware.js');
+      throw new NotFoundError('Student profile not found');
+    }
+
+    // Call service
+    const StudentSessionService = (await import('../services/session/StudentSessionService.js')).default;
+    const result = await StudentSessionService.cancelBooking(student._id, sessionId);
+
+    res.status(200).json(result);
   });
 }
 
